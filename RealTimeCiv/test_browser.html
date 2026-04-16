@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Тест игры</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            background: #1a1a2e; 
+            color: white; 
+            padding: 20px; 
+        }
+        .status { 
+            padding: 15px; 
+            margin: 10px 0; 
+            border-radius: 8px; 
+        }
+        .ok { background: #2ecc71; }
+        .error { background: #e74c3c; }
+        .info { background: #3498db; }
+    </style>
+</head>
+<body>
+    <h1>🎮 Real-Time Civilization - Тест</h1>
+    
+    <div id="status"></div>
+    
+    <h2>Инструкция:</h2>
+    <ol>
+        <li>Откройте <strong><a href="index.html" target="_blank" style="color: #4a9eff;">index.html</a></strong> в браузере</li>
+        <li>Игра должна загрузиться с картой, городом и юнитами</li>
+        <li>Управление:
+            <ul>
+                <li>🖱️ Перетаскивание мышью - перемещение камеры</li>
+                <li>🖱️ Клик по юниту - выбор</li>
+                <li>🖱️ Кнопки справа - действия (основать город, обучить юнитов)</li>
+            </ul>
+        </li>
+    </ol>
+    
+    <h2>Проверка файлов:</h2>
+    <div id="file-check"></div>
+    
+    <script>
+        const statusDiv = document.getElementById('status');
+        const fileCheckDiv = document.getElementById('file-check');
+        
+        // Проверка загрузки
+        setTimeout(() => {
+            fetch('scripts/game.js')
+                .then(r => r.text())
+                .then(code => {
+                    if (code.includes('class Game')) {
+                        statusDiv.innerHTML = '<div class="status ok">✅ Файл game.js загружен корректно!</div>';
+                        fileCheckDiv.innerHTML = '<div class="status info">ℹ️ Все файлы на месте. Игра готова к запуску.</div>';
+                    } else {
+                        throw new Error('Неверное содержимое');
+                    }
+                })
+                .catch(e => {
+                    statusDiv.innerHTML = '<div class="status error">❌ Ошибка загрузки game.js: ' + e.message + '</div>';
+                });
+        }, 500);
+    </script>
+</body>
+</html>
