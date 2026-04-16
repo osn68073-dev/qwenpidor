@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Civilization</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a2e;
+            color: #eee;
+            overflow: hidden;
+        }
+        
+        #game-container {
+            display: flex;
+            height: 100vh;
+        }
+        
+        #game-canvas {
+            flex: 1;
+            background: #16213e;
+            cursor: crosshair;
+        }
+        
+        #ui-panel {
+            width: 300px;
+            background: #0f3460;
+            padding: 20px;
+            overflow-y: auto;
+            border-left: 2px solid #e94560;
+        }
+        
+        .stat-box {
+            background: rgba(0,0,0,0.3);
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            border: 1px solid #e94560;
+        }
+        
+        .stat-box h3 {
+            color: #e94560;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        
+        .resource {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+            padding: 5px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 4px;
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 12px;
+            margin: 5px 0;
+            background: #e94560;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        
+        .btn:hover {
+            background: #ff6b6b;
+            transform: translateY(-2px);
+        }
+        
+        .btn:disabled {
+            background: #666;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        #minimap {
+            width: 100%;
+            height: 150px;
+            background: #0a0a1a;
+            border: 2px solid #e94560;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        
+        .city-info {
+            background: rgba(233,69,96,0.1);
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        
+        #notifications {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+        }
+        
+        .notification {
+            background: #e94560;
+            color: white;
+            padding: 15px 20px;
+            margin: 10px 0;
+            border-radius: 5px;
+            animation: slideIn 0.3s ease-out;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(-100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        h1 {
+            color: #e94560;
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="game-canvas"></canvas>
+        <div id="ui-panel">
+            <h1>🏛️ Real-Time Civ</h1>
+            
+            <div class="stat-box">
+                <h3>📊 Ресурсы</h3>
+                <div class="resource">
+                    <span>🍞 Еда:</span>
+                    <span id="food">0</span>
+                </div>
+                <div class="resource">
+                    <span>💰 Золото:</span>
+                    <span id="gold">0</span>
+                </div>
+                <div class="resource">
+                    <span>🔬 Наука:</span>
+                    <span id="science">0</span>
+                </div>
+                <div class="resource">
+                    <span>⚔️ Культура:</span>
+                    <span id="culture">0</span>
+                </div>
+            </div>
+            
+            <div class="stat-box">
+                <h3>🏙️ Города</h3>
+                <div id="cities-list"></div>
+                <button class="btn" onclick="game.foundCity()">Основать город (100💰)</button>
+            </div>
+            
+            <div class="stat-box">
+                <h3>⚔️ Армия</h3>
+                <button class="btn" onclick="game.trainUnit('warrior')">Воин (50💰)</button>
+                <button class="btn" onclick="game.trainUnit('archer')">Лучник (75💰)</button>
+                <button class="btn" onclick="game.trainUnit('cavalry')">Кавалерия (120💰)</button>
+            </div>
+            
+            <div class="stat-box">
+                <h3>🔬 Технологии</h3>
+                <div id="tech-progress"></div>
+                <button class="btn" onclick="game.researchTech()">Исследовать (50🔬)</button>
+            </div>
+            
+            <canvas id="minimap"></canvas>
+        </div>
+    </div>
+    
+    <div id="notifications"></div>
+    
+    <script src="scripts/game.js"></script>
+</body>
+</html>
