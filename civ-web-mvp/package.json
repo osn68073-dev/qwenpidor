@@ -1,0 +1,22 @@
+{
+  "name": "civ-web-mvp",
+  "version": "1.0.0",
+  "description": "Real-time 4X strategy game inspired by Civilization VI - browser-based MVP",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "keywords": ["game", "strategy", "4x", "civilization", "pixijs", "typescript"],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.3.3",
+    "vite": "^5.0.10"
+  },
+  "dependencies": {
+    "pixi.js": "^7.4.0",
+    "simplex-noise": "^4.0.1"
+  }
+}
