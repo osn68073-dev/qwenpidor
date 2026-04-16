@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eternal Lust: Городская Жизнь</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:wght@700&display=swap');
+        
+        body {
+            background: #0a0518;
+            color: #ffccdd;
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 15px;
+        }
+        .container {
+            max-width: 1220px;
+            margin: 0 auto;
+            background: #1f1733;
+            border: 3px solid #ff3366;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(255, 51, 102, 0.3);
+        }
+        header {
+            background: linear-gradient(135deg, #ff3366, #990033);
+            padding: 20px;
+            text-align: center;
+            color: white;
+            border-bottom: 2px solid #ff6699;
+        }
+        h1 { margin: 0; font-size: 2.5em; font-family: 'Playfair Display', serif; text-shadow: 2px 2px 4px #000; }
+        h2 { margin: 5px 0 0; font-size: 1.2em; opacity: 0.9; font-weight: normal; }
+
+        .panel {
+            padding: 20px;
+            margin: 15px;
+            background: #2a1f3f;
+            border-radius: 16px;
+            border: 1px solid #443366;
+            box-shadow: inset 0 0 10px #000;
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            margin: 6px 0;
+            background: linear-gradient(to bottom, #3a2a4f, #2a1f3f);
+            color: #ffeedd;
+            border: 1px solid #ff3366;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+        button:hover { 
+            background: linear-gradient(to bottom, #ff3366, #cc2244); 
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(255, 51, 102, 0.4);
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            filter: grayscale(1);
+        }
+
+        .npc-menu {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+        .npc-btn {
+            flex: 1;
+            min-width: 120px;
+            padding: 10px;
+            background: #1f1733;
+            border: 1px solid #664488;
+        }
+        .npc-btn.active {
+            background: #ff3366;
+            border-color: #ff99bb;
+            color: white;
+        }
+
+        .npc-image-container {
+            width: 100%;
+            height: 300px;
+            overflow: hidden;
+            border-radius: 12px;
+            border: 3px solid #ff3366;
+            margin: 15px 0;
+            position: relative;
+            background: #000;
+        }
+        .npc-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .stats-panel {
+            background: #140d20;
+            padding: 20px;
+            border-radius: 14px;
+            border: 1px solid #ff3366;
+            margin-bottom: 15px;
+        }
+
+        .log {
+            background: #0f0816;
+            border: 1px solid #332244;
+            border-radius: 10px;
+            padding: 15px;
+            height: 250px;
+            overflow-y: auto;
+            margin: 15px 0;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        .log p { margin: 5px 0; border-bottom: 1px solid #221133; padding-bottom: 5px; }
+        .log p:last-child { border-bottom: none; }
+
+        .hidden { display: none !important; }
+        .highlight { color: #ffdd99; font-weight: bold; }
+        .stat-row { display: flex; justify-content: space-between; margin-bottom: 8px; }
+        .bar-container { width: 60%; background: #333; height: 10px; border-radius: 5px; overflow: hidden; }
+        .bar-fill { height: 100%; background: #ff3366; width: 0%; transition: width 0.3s; }
+        
+        .location-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            background: #ff3366;
+            border-radius: 12px;
+            font-size: 0.8em;
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>ETERNAL LUST</h1>
+            <h2>Городская Жизнь</h2>
+        </header>
+
+        <!-- Выбор сложности -->
+        <div id="difficulty_screen" class="panel">
+            <h3 style="text-align:center; margin-bottom:25px; color: #ff99bb;">Выбери уровень сложности</h3>
+            <button onclick="startGame(1)">💖 Стандартный (Легко)</button>
+            <button onclick="startGame(2)">🔥 Хард (Сложно)</button>
+        </div>
+
+        <!-- Создание персонажа -->
+        <div id="character_creation" class="panel hidden">
+            <h3 id="step_title" style="text-align:center; color: #ff99bb;">Создание персонажа</h3>
+            <div id="creation_options" style="margin-top: 20px;"></div>
+        </div>
+
+        <!-- Основная игра -->
+        <div id="game" class="panel hidden">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; flex-wrap: wrap; gap: 10px;">
+                <button onclick="toggleStats()" style="width:auto; padding:10px 20px; margin:0;">📊 Статус</button>
+                <div style="font-size: 1.1em; color: #ffccdd;">
+                    <span id="day_display">День 1</span> • <span id="time_display" class="highlight">Вечер</span>
+                </div>
+                <div style="font-size: 0.9em; color: #aaa;">
+                    Энергия: <span id="energy_display" class="highlight">100%</span>
+                </div>
+            </div>
+
+            <!-- Панель статистики (скрытая) -->
+            <div id="stats_panel" class="stats-panel hidden">
+                <h4 style="margin-top:0; color:#ff99bb; border-bottom: 1px solid #443366; padding-bottom:10px;">Отношения и Секреты</h4>
+                <div id="relations_list"></div>
+                <button onclick="toggleStats()" style="margin-top:10px; background:#442b66;">Закрыть</button>
+            </div>
+
+            <!-- Меню выбора NPC -->
+            <div class="panel" style="border-color: #664488;">
+                <h4 style="margin-top:0;">Девушки:</h4>
+                <div class="npc-menu" id="npc_menu"></div>
+            </div>
+
+            <!-- Текущий NPC -->
+            <div class="panel">
+                <h3 id="current_npc_name" style="text-align:center; margin:0; color:#ff99bb;"></h3>
+                <div class="npc-image-container">
+                    <img id="current_npc_image" class="npc-image" src="" alt="NPC">
+                </div>
+                <p id="npc_status" style="text-align:center; font-style:italic; font-size: 0.9em; color: #ccc;"></p>
+                <p id="npc_location_status" style="text-align:center; font-size: 0.85em; color: #ff6699;"></p>
+            </div>
+
+            <!-- Локации -->
+            <div class="panel">
+                <h4 style="margin-top:0;">Перемещение <span id="current_location_badge" class="location-badge">Дом</span>:</h4>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <button onclick="changeLocation('home')">🏠 Дом</button>
+                    <button onclick="changeLocation('work')">🏢 Работа</button>
+                    <button onclick="changeLocation('cafe')">☕ Кафе</button>
+                    <button onclick="changeLocation('park')">🌳 Парк</button>
+                </div>
+            </div>
+
+            <!-- Действия -->
+            <div class="panel">
+                <h4 id="action_title" style="margin-top:0;">Действия</h4>
+                <div id="actions"></div>
+            </div>
+
+            <div id="log" class="log"></div>
+            
+            <button onclick="nextTimeStep()" style="background: #224433; border-color: #44aa88; margin-top: 10px;">⏳ Следующий период времени</button>
+        </div>
+    </div>
+
+    <script>
+        // --- Конфигурация и Состояние ---
+        let difficulty = 1;
+        let player = {};
+        let currentNPCKey = "victoria";
+        let currentLocation = "home";
+        
+        let gameState = {
+            day: 1,
+            timeIndex: 3, // 0: Утро, 1: День, 2: Вечер, 3: Ночь
+            energy: 100
+        };
+
+        const times = ["Утро", "День", "Вечер", "Ночь"];
+
+        let npcs = {
+            victoria: {
+                name: "Виктория",
+                image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80",
+                relation: 60,
+                arousal: 0,
+                location: "home",
+                hidden: "Она сильно возбуждается, когда ты проявляешь доминирование и уверенность",
+                knownHidden: false,
+                status: "Твоя девушка",
+                schedule: ["home", "home", "home", "home"]
+            },
+            anna: {
+                name: "Анна",
+                image: "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&w=800&q=80",
+                relation: 20,
+                arousal: 0,
+                location: "work",
+                hidden: "Она любит грубый секс и лёгкое унижение",
+                knownHidden: false,
+                status: "Коллега",
+                schedule: ["home", "work", "work", "home"]
+            },
+            sofia: {
+                name: "София",
+                image: "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=800&q=80",
+                relation: 10,
+                arousal: 0,
+                location: "cafe",
+                hidden: "Она очень стеснительная, но мечтает о нежном и романтичном партнёре",
+                knownHidden: false,
+                status: "Официантка",
+                schedule: ["home", "cafe", "cafe", "home"]
+            }
+        };
+
+        // --- Инициализация ---
+        function startGame(lvl) {
+            difficulty = lvl;
+            document.getElementById('difficulty_screen').classList.add('hidden');
+            document.getElementById('character_creation').classList.remove('hidden');
+            createCharacterStep(0);
+        }
+
+        function createCharacterStep(step) {
+            const steps = [
+                { title: "Сколько тебе лет?", options: ["26 лет", "30 лет", "34 года"], key: "age", values: [26,30,34] },
+                { title: "Какое у тебя телосложение?", options: ["Худощавый", "Среднее", "Крепкий"], key: "body", values: ["худощавый", "среднее", "крепкий"] }
+            ];
+
+            if (step >= steps.length) {
+                finishCreation();
+                return;
+            }
+
+            document.getElementById('step_title').textContent = `Шаг ${step+1}: ${steps[step].title}`;
+            const cont = document.getElementById('creation_options');
+            cont.innerHTML = '';
+
+            steps[step].options.forEach((text, i) => {
+                const btn = document.createElement('button');
+                btn.textContent = text;
+                btn.onclick = () => {
+                    player[steps[step].key] = steps[step].values[i];
+                    createCharacterStep(step + 1);
+                };
+                cont.appendChild(btn);
+            });
+        }
+
+        function finishCreation() {
+            player.name = "Алексей";
+            document.getElementById('character_creation').classList.add('hidden');
+            document.getElementById('game').classList.remove('hidden');
+
+            renderNPCMenu();
+            switchNPC("victoria");
+            updateHeader();
+            addLog(`<strong>Игра началась!</strong> Ты проснулся в своей квартире.`);
+            addLog(`Сегодня новый день. Виктория уже на кухне.`);
+        }
+
+        // --- Навигация и Рендеринг ---
+        function renderNPCMenu() {
+            const menu = document.getElementById('npc_menu');
+            menu.innerHTML = '';
+            Object.keys(npcs).forEach(key => {
+                const npc = npcs[key];
+                const btn = document.createElement('button');
+                btn.className = `npc-btn ${key === currentNPCKey ? 'active' : ''}`;
+                btn.textContent = npc.name;
+                btn.onclick = () => switchNPC(key);
+                menu.appendChild(btn);
+            });
+        }
+
+        function switchNPC(key) {
+            currentNPCKey = key;
+            renderNPCMenu();
+            updateCurrentNPC();
+            updateActions();
+        }
+
+        function updateCurrentNPC() {
+            const npc = npcs[currentNPCKey];
+            document.getElementById('current_npc_name').textContent = npc.name;
+            document.getElementById('current_npc_image').src = npc.image;
+            
+            const isHere = npc.schedule[gameState.timeIndex] === currentLocation || (currentLocation === 'home' && npc.location === 'home');
+            
+            let statusText = `Отношения: ${npc.relation}/100`;
+            if (npc.knownHidden) statusText += ` • ❤️ Секрет известен`;
+            
+            document.getElementById('npc_status').textContent = statusText;
+            
+            const locStatus = document.getElementById('npc_location_status');
+            if (isHere) {
+                locStatus.textContent = "✅ Она сейчас здесь";
+                locStatus.style.color = "#44ff88";
+            } else {
+                locStatus.textContent = "❌ Её здесь нет сейчас";
+                locStatus.style.color = "#ff6666";
+            }
+        }
+
+        function updateHeader() {
+            document.getElementById('day_display').textContent = `День ${gameState.day}`;
+            document.getElementById('time_display').textContent = times[gameState.timeIndex];
+            document.getElementById('energy_display').textContent = `${gameState.energy}%`;
+            
+            const locNames = { 'home': 'Дом', 'work': 'Работа', 'cafe': 'Кафе', 'park': 'Парк' };
+            document.getElementById('current_location_badge').textContent = locNames[currentLocation];
+        }
+
+        function toggleStats() {
+            const panel = document.getElementById('stats_panel');
+            panel.classList.toggle('hidden');
+            if (!panel.classList.contains('hidden')) {
+                updateRelationsPanel();
+            }
+        }
+
+        function updateRelationsPanel() {
+            const container = document.getElementById('relations_list');
+            container.innerHTML = '';
+            Object.values(npcs).forEach(npc => {
+                const div = document.createElement('div');
+                div.className = 'stat-row';
+                div.style.alignItems = 'center';
+                div.innerHTML = `
+                    <div style="width: 30%">${npc.name}</div>
+                    <div class="bar-container">
+                        <div class="bar-fill" style="width: ${npc.relation}%"></div>
+                    </div>
+                    <div style="width: 10%; text-align:right">${npc.relation}%</div>
+                `;
+                container.appendChild(div);
+                
+                const secretDiv = document.createElement('div');
+                secretDiv.style.fontSize = '0.85em';
+                secretDiv.style.color = npc.knownHidden ? '#ff99bb' : '#555';
+                secretDiv.style.marginBottom = '15px';
+                secretDiv.textContent = npc.knownHidden ? `🔓 ${npc.hidden}` : "🔒 Секрет скрыт (нужно >70 отношений)";
+                container.appendChild(secretDiv);
+            });
+        }
+
+        function changeLocation(loc) {
+            if (gameState.energy <= 0) {
+                addLog(`<span style="color:red">Ты слишком устал, чтобы куда-то идти.</span>`);
+                return;
+            }
+            currentLocation = loc;
+            gameState.energy -= 5;
+            updateHeader();
+            updateCurrentNPC();
+            updateActions();
+            
+            const locNames = { 'home': 'домой', 'work': 'на работу', 'cafe': 'в кафе', 'park': 'в парк' };
+            addLog(`Ты отправился ${locNames[loc]}.`);
+            
+            if (Math.random() > 0.7) {
+                const randomNpcKey = Object.keys(npcs)[Math.floor(Math.random() * 3)];
+                const randomNpc = npcs[randomNpcKey];
+                if (randomNpcKey !== currentNPCKey && randomNpc.schedule[gameState.timeIndex] === loc) {
+                    addLog(`<span class="highlight">Ого! Ты встретил ${randomNpc.name}!</span>`);
+                    switchNPC(randomNpcKey);
+                }
+            }
+        }
+
+        function nextTimeStep() {
+            gameState.timeIndex++;
+            if (gameState.timeIndex > 3) {
+                gameState.timeIndex = 0;
+                gameState.day++;
+                gameState.energy = 100;
+                addLog(`<strong>Наступило новое утро Дня ${gameState.day}.</strong>`);
+            } else {
+                gameState.energy = Math.min(100, gameState.energy + 20);
+            }
+            updateHeader();
+            updateCurrentNPC();
+            updateActions();
+            addLog(`--- Время изменилось: ${times[gameState.timeIndex]} ---`);
+        }
+
+        function updateActions() {
+            const container = document.getElementById('actions');
+            container.innerHTML = '';
+            const npc = npcs[currentNPCKey];
+            
+            const isHere = npc.schedule[gameState.timeIndex] === currentLocation;
+            
+            if (!isHere) {
+                container.innerHTML = `<p style="text-align:center; color:#aaa; padding:20px;">${npc.name} сейчас нет в этом месте.<br>Попробуй найти её в другом месте или подождать.</p>`;
+                document.getElementById('action_title').innerHTML = `Действия недоступны`;
+                return;
+            }
+
+            document.getElementById('action_title').innerHTML = `Действия с <span class="highlight">${npc.name}</span>`;
+
+            const actions = [
+                { text: "💬 Поговорить", cost: 5, rel: 5, msg: `Вы приятно поболтали о жизни.` },
+                { text: "🎁 Сделать комплимент", cost: 10, rel: 8, msg: `${npc.name} смутилась и улыбнулась.` },
+                { text: "😏 Флирт", cost: 15, rel: 5, arousal: 10, reqRel: 20, msg: `Твои слова заставили её покраснеть.` }
+            ];
+
+            if (npc.relation >= 40) {
+                actions.push({ text: "🤗 Прикоснуться", cost: 15, rel: 5, arousal: 15, msg: `Ты нежно коснулся её руки.` });
+            }
+            if (npc.relation >= 60) {
+                actions.push({ text: "💋 Поцеловать", cost: 20, rel: 10, arousal: 25, msg: `Вы страстно поцеловались.` });
+            }
+            if (npc.relation >= 80 && currentLocation === 'home') {
+                actions.push({ text: "🔥 Предложить интим", cost: 30, rel: 15, arousal: 50, msg: `Вы провели незабываемые моменты вместе.` });
+            }
+
+            actions.forEach(act => {
+                const btn = document.createElement('button');
+                btn.textContent = `${act.text} (-${act.cost} эн.)`;
+                
+                let disabled = false;
+                let reason = "";
+                if (gameState.energy < act.cost) { disabled = true; reason = "Не хватает энергии"; }
+                if (act.reqRel && npc.relation < act.reqRel) { disabled = true; reason = "Нужны лучшие отношения"; }
+                if (act.arousal && currentLocation !== 'home' && act.text.includes("интим")) { disabled = true; reason = "Неподходящее место"; }
+
+                if (disabled) {
+                    btn.disabled = true;
+                    btn.title = reason;
+                    btn.style.opacity = 0.5;
+                }
+
+                btn.onclick = () => {
+                    gameState.energy -= act.cost;
+                    if (act.rel) npc.relation = Math.min(100, npc.relation + act.rel);
+                    if (act.arousal) npc.arousal = Math.min(100, npc.arousal + act.arousal);
+
+                    addLog(`<strong>${act.msg}</strong>`);
+                    
+                    if (npc.relation >= 70 && !npc.knownHidden) {
+                        npc.knownHidden = true;
+                        addLog(`<span style="color:#ff99bb; font-weight:bold">✨ Ты узнал секрет ${npc.name}!</span>`);
+                        if (document.getElementById('stats_panel') && !document.getElementById('stats_panel').classList.contains('hidden')) {
+                            updateRelationsPanel();
+                        }
+                    }
+
+                    updateHeader();
+                    updateCurrentNPC();
+                    
+                    if (act.arousal > 20 && npc.relation < 50 && Math.random() > 0.5) {
+                        addLog(`<span style="color:#ff6666">${npc.name} отстранилась: "Ещё рано для этого..."</span>`);
+                        npc.relation -= 5;
+                    }
+                };
+                container.appendChild(btn);
+            });
+        }
+
+        function addLog(html) {
+            const log = document.getElementById('log');
+            const p = document.createElement('p');
+            p.innerHTML = html;
+            log.appendChild(p);
+            log.scrollTop = log.scrollHeight;
+        }
+    </script>
+</body>
+</html>
