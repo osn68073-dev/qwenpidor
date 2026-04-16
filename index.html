@@ -173,9 +173,24 @@
 
             <!-- Панель статистики (скрытая) -->
             <div id="stats_panel" class="stats-panel hidden">
-                <h4 style="margin-top:0; color:#ff99bb; border-bottom: 1px solid #443366; padding-bottom:10px;">Отношения и Секреты</h4>
+                <h4 style="margin-top:0; color:#ff99bb; border-bottom: 1px solid #443366; padding-bottom:10px;">📊 Статистика Персонажа</h4>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+                    <div style="background: #1f1733; padding: 15px; border-radius: 10px; border: 1px solid #443366;">
+                        <div class="stat-row"><strong>Имя:</strong> <span>${player.name}</span></div>
+                        <div class="stat-row"><strong>Возраст:</strong> <span>${player.age} лет</span></div>
+                        <div class="stat-row"><strong>Телосложение:</strong> <span>${player.body}</span></div>
+                    </div>
+                    <div style="background: #1f1733; padding: 15px; border-radius: 10px; border: 1px solid #443366;">
+                        <div class="stat-row"><strong>День:</strong> <span id="stat_day">${gameState.day}</span></div>
+                        <div class="stat-row"><strong>Время:</strong> <span id="stat_time">${times[gameState.timeIndex]}</span></div>
+                        <div class="stat-row"><strong>Энергия:</strong> <span id="stat_energy">${gameState.energy}%</span></div>
+                    </div>
+                </div>
+                
+                <h4 style="color:#ff99bb; border-bottom: 1px solid #443366; padding-bottom:10px;">❤️ Отношения и Секреты</h4>
                 <div id="relations_list"></div>
-                <button onclick="toggleStats()" style="margin-top:10px; background:#442b66;">Закрыть</button>
+                <button onclick="toggleStats()" style="margin-top:15px; background:#442b66;">Закрыть</button>
             </div>
 
             <!-- Меню выбора NPC -->
@@ -235,7 +250,7 @@
         let npcs = {
             victoria: {
                 name: "Виктория",
-                image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80",
+                image: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=800&q=80",
                 relation: 60,
                 arousal: 0,
                 location: "home",
@@ -246,7 +261,7 @@
             },
             anna: {
                 name: "Анна",
-                image: "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&w=800&q=80",
+                image: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=800&q=80",
                 relation: 20,
                 arousal: 0,
                 location: "work",
@@ -312,6 +327,10 @@
             updateHeader();
             addLog(`<strong>Игра началась!</strong> Ты проснулся в своей квартире.`);
             addLog(`Сегодня новый день. Виктория уже на кухне.`);
+            
+            // Инициализация статистики игрока
+            if (!player.age) player.age = 30;
+            if (!player.body) player.body = "среднее";
         }
 
         // --- Навигация и Рендеринг ---
@@ -371,7 +390,14 @@
             panel.classList.toggle('hidden');
             if (!panel.classList.contains('hidden')) {
                 updateRelationsPanel();
+                updatePlayerStats();
             }
+        }
+
+        function updatePlayerStats() {
+            document.getElementById('stat_day').textContent = gameState.day;
+            document.getElementById('stat_time').textContent = times[gameState.timeIndex];
+            document.getElementById('stat_energy').textContent = `${gameState.energy}%`;
         }
 
         function updateRelationsPanel() {
