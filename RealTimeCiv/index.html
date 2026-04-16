@@ -2,47 +2,46 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Real-Time Civilization</title>
+    <title>Real-Time Civ: Empires</title>
     <style>
         :root {
             --bg-color: #1a1a2e;
-            --panel-bg: rgba(22, 33, 62, 0.95);
-            --accent: #4ecca3;
-            --danger: #e94560;
+            --panel-bg: rgba(22, 33, 62, 0.85);
+            --accent: #e94560;
             --text: #ffffff;
-            --highlight: #ffd700;
+            --gold: #ffd700;
+            --food: #4caf50;
+            --science: #2196f3;
+            --culture: #9c27b0;
         }
 
-        body, html {
+        body {
             margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
             overflow: hidden;
+            background: var(--bg-color);
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--bg-color);
             color: var(--text);
             user-select: none;
         }
 
-        /* Canvas */
         #gameCanvas {
             display: block;
             cursor: crosshair;
         }
 
         /* UI Overlay */
-        #ui-layer {
+        .ui-layer {
             position: absolute;
-            top: 0;
-            left: 0;
+            pointer-events: none;
             width: 100%;
             height: 100%;
-            pointer-events: none;
+            top: 0;
+            left: 0;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
+            padding: 20px;
+            box-sizing: border-box;
         }
 
         .pointer-events-auto {
@@ -50,140 +49,151 @@
         }
 
         /* Top Bar: Resources */
-        #top-bar {
-            background: var(--panel-bg);
-            padding: 10px 20px;
+        .top-bar {
             display: flex;
             gap: 20px;
-            border-bottom: 2px solid var(--accent);
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-            backdrop-filter: blur(5px);
+            background: var(--panel-bg);
+            backdrop-filter: blur(10px);
+            padding: 15px 25px;
+            border-radius: 15px;
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            align-self: center;
         }
 
         .res-item {
             display: flex;
             align-items: center;
-            font-size: 18px;
-            font-weight: bold;
-        }
-
-        .res-icon { margin-right: 8px; font-size: 24px; }
-
-        /* Bottom Bar: Actions & Info */
-        #bottom-panel {
-            display: flex;
-            padding: 15px;
-            gap: 15px;
-            align-items: flex-end;
-            justify-content: space-between;
-        }
-
-        #selection-info {
-            background: var(--panel-bg);
-            padding: 15px;
-            border-radius: 8px;
-            border: 1px solid var(--accent);
-            min-width: 250px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-        }
-
-        #actions-panel {
-            background: var(--panel-bg);
-            padding: 10px;
-            border-radius: 8px;
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
             gap: 8px;
-            border: 1px solid #444;
+            font-weight: bold;
+            font-size: 18px;
         }
 
-        button {
-            background: linear-gradient(135deg, #2c3e50, #34495e);
-            border: 1px solid var(--accent);
+        .res-icon { font-size: 24px; }
+        .res-gold { color: var(--gold); }
+        .res-food { color: var(--food); }
+        .res-science { color: var(--science); }
+        .res-culture { color: var(--culture); }
+
+        /* Bottom Bar: Actions */
+        .bottom-panel {
+            display: flex;
+            gap: 15px;
+            align-self: center;
+            margin-bottom: 20px;
+        }
+
+        .action-btn {
+            background: linear-gradient(135deg, #2a2a4a, #1a1a2e);
+            border: 1px solid rgba(255,255,255,0.2);
             color: white;
-            padding: 10px;
-            border-radius: 4px;
+            padding: 12px 20px;
+            border-radius: 10px;
             cursor: pointer;
-            font-weight: bold;
+            font-size: 16px;
             transition: all 0.2s;
             display: flex;
             flex-direction: column;
             align-items: center;
-            font-size: 12px;
+            min-width: 100px;
+            text-align: center;
         }
 
-        button:hover:not(:disabled) {
-            background: linear-gradient(135deg, #34495e, var(--accent));
+        .action-btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 0 10px var(--accent);
+            background: linear-gradient(135deg, #3a3a5a, #2a2a4a);
+            border-color: var(--accent);
+            box-shadow: 0 0 15px rgba(233, 69, 96, 0.4);
         }
 
-        button:disabled {
+        .action-btn:disabled {
             opacity: 0.5;
             cursor: not-allowed;
-            border-color: #555;
+            transform: none;
+            filter: grayscale(1);
         }
 
-        .btn-icon { font-size: 20px; margin-bottom: 4px; }
+        .btn-cost {
+            font-size: 12px;
+            color: #aaa;
+            margin-top: 4px;
+        }
 
         /* Minimap */
-        #minimap-container {
+        .minimap-container {
             position: absolute;
             bottom: 20px;
             right: 20px;
-            width: 150px;
-            height: 150px;
+            width: 200px;
+            height: 200px;
             background: rgba(0,0,0,0.8);
-            border: 2px solid var(--accent);
-            border-radius: 4px;
-            pointer-events: auto;
+            border: 2px solid rgba(255,255,255,0.2);
+            border-radius: 10px;
             overflow: hidden;
+            pointer-events: auto;
+            cursor: pointer;
         }
 
-        #minimap {
+        #minimapCanvas {
             width: 100%;
             height: 100%;
         }
 
         /* Main Menu */
-        #main-menu {
+        #mainMenu {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: radial-gradient(circle, #2c3e50 0%, #000000 100%);
+            background: radial-gradient(circle at center, #2a2a4a 0%, #0f0f1a 100%);
             display: flex;
             flex-direction: column;
-            align-items: center;
             justify-content: center;
-            z-index: 100;
+            align-items: center;
+            z-index: 1000;
             pointer-events: auto;
         }
 
-        h1 {
+        .menu-title {
             font-size: 64px;
-            color: var(--accent);
-            text-shadow: 0 0 20px var(--accent);
-            margin-bottom: 10px;
-            letter-spacing: 5px;
+            font-weight: 900;
+            background: linear-gradient(to right, #e94560, #ffd700);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 20px;
+            text-shadow: 0 4px 20px rgba(233, 69, 96, 0.5);
+            letter-spacing: 2px;
         }
 
-        .menu-btn {
-            padding: 15px 40px;
+        .menu-desc {
+            font-size: 18px;
+            color: #ccc;
+            max-width: 600px;
+            text-align: center;
+            margin-bottom: 40px;
+            line-height: 1.6;
+            background: rgba(255,255,255,0.05);
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        .start-btn {
+            padding: 15px 60px;
             font-size: 24px;
-            background: transparent;
-            border: 2px solid var(--accent);
-            color: var(--accent);
-            margin-top: 20px;
+            background: linear-gradient(45deg, #e94560, #c0354a);
+            border: none;
+            color: white;
             border-radius: 50px;
-            transition: 0.3s;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 0 0 30px rgba(233, 69, 96, 0.6);
+            transition: transform 0.2s, box-shadow 0.2s;
         }
 
-        .menu-btn:hover {
-            background: var(--accent);
-            color: #000;
-            box-shadow: 0 0 30px var(--accent);
+        .start-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 50px rgba(233, 69, 96, 0.8);
         }
 
         /* Notifications */
@@ -198,40 +208,20 @@
         }
 
         .toast {
-            background: rgba(44, 62, 80, 0.9);
+            background: rgba(22, 33, 62, 0.9);
             border-left: 4px solid var(--accent);
             padding: 10px 20px;
             border-radius: 4px;
-            animation: slideIn 0.3s ease-out forwards, fadeOut 0.5s ease-in 2.5s forwards;
-            color: white;
-            font-weight: bold;
+            animation: slideIn 0.3s ease-out;
+            backdrop-filter: blur(5px);
         }
 
-        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-        @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
-
-        /* Context Menu */
-        #context-menu {
-            position: absolute;
-            background: var(--panel-bg);
-            border: 1px solid var(--accent);
-            border-radius: 4px;
-            padding: 5px 0;
-            display: none;
-            z-index: 50;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
         }
 
-        .ctx-item {
-            padding: 8px 15px;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-
-        .ctx-item:hover {
-            background: var(--accent);
-            color: #000;
-        }
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
@@ -240,821 +230,632 @@
     <canvas id="gameCanvas"></canvas>
 
     <!-- UI Layer -->
-    <div id="ui-layer">
-        <!-- Top Bar -->
-        <div id="top-bar" class="pointer-events-auto">
-            <div class="res-item"><span class="res-icon">💰</span><span id="res-gold">0</span></div>
-            <div class="res-item"><span class="res-icon">🍞</span><span id="res-food">0</span></div>
-            <div class="res-item"><span class="res-icon">🔬</span><span id="res-science">0</span></div>
-            <div class="res-item"><span class="res-icon">⚔️</span><span id="res-culture">0</span></div>
-            <div style="margin-left: auto; color: #aaa; font-size: 14px;">День: <span id="game-day">1</span></div>
+    <div class="ui-layer" id="uiLayer">
+        <!-- Top Resources -->
+        <div class="top-bar pointer-events-auto">
+            <div class="res-item res-gold"><span class="res-icon">💰</span><span id="resGold">0</span></div>
+            <div class="res-item res-food"><span class="res-icon">🍞</span><span id="resFood">0</span></div>
+            <div class="res-item res-science"><span class="res-icon">🔬</span><span id="resScience">0</span></div>
+            <div class="res-item res-culture"><span class="res-icon">⚔️</span><span id="resCulture">0</span></div>
+            <div style="border-left: 1px solid #555; margin: 0 10px;"></div>
+            <div class="res-item" style="color: #fff;"><span id="turnTime">Day 1</span></div>
         </div>
 
         <!-- Notifications -->
         <div id="notifications"></div>
 
-        <!-- Context Menu -->
-        <div id="context-menu"></div>
-
-        <!-- Bottom Panel -->
-        <div id="bottom-panel" class="pointer-events-auto">
-            <div id="selection-info">
-                <h3 id="sel-name" style="margin: 0 0 5px 0; color: var(--accent);">Ничего не выбрано</h3>
-                <p id="sel-desc" style="margin: 0; font-size: 14px; color: #ccc;">Кликните ЛКМ по объекту или перетаскивайте карту.</p>
-                <div id="sel-stats" style="margin-top: 8px; font-size: 13px;"></div>
-            </div>
-
-            <div id="actions-panel">
-                <!-- Buttons injected by JS -->
-            </div>
+        <!-- Bottom Actions -->
+        <div class="bottom-panel pointer-events-auto" id="actionPanel">
+            <button class="action-btn" onclick="game.trainUnit('settler')">
+                <span>🚜 Поселенец</span>
+                <span class="btn-cost">100 💰, 50 🍞</span>
+            </button>
+            <button class="action-btn" onclick="game.trainUnit('warrior')">
+                <span>⚔️ Воин</span>
+                <span class="btn-cost">60 💰, 20 🍞</span>
+            </button>
+            <button class="action-btn" onclick="game.trainUnit('archer')">
+                <span>🏹 Лучник</span>
+                <span class="btn-cost">80 💰, 30 🍞</span>
+            </button>
+            <button class="action-btn" onclick="game.researchTech()">
+                <span>📜 Исследовать</span>
+                <span class="btn-cost">200 🔬</span>
+            </button>
         </div>
 
         <!-- Minimap -->
-        <div id="minimap-container">
-            <canvas id="minimap"></canvas>
+        <div class="minimap-container pointer-events-auto">
+            <canvas id="minimapCanvas"></canvas>
         </div>
     </div>
 
     <!-- Main Menu -->
-    <div id="main-menu">
-        <h1>CIV REAL-TIME</h1>
-        <p style="color: #aaa; max-width: 600px; text-align: center; line-height: 1.6;">
-            Стратегия в реальном времени.<br>
-            Управляйте империей, развивайте технологии и побеждайте врагов.<br><br>
-            🖱️ <b>ЛКМ</b>: Выбор / Перетаскивание карты<br>
-            🖱️ <b>ПКМ</b>: Движение / Атака / Отмена
-        </p>
-        <button class="menu-btn" onclick="startGame()">НАЧАТЬ ИГРУ</button>
+    <div id="mainMenu">
+        <div class="menu-title">REAL-TIME CIV</div>
+        <div class="menu-desc">
+            Добро пожаловать, Правитель!<br><br>
+            🖱️ <b>ЛКМ</b>: Выбор юнита / Перетаскивание карты (на пустом месте)<br>
+            🖱️ <b>ПКМ</b>: Движение или Атака выбранного юнита<br>
+            🏰 Основывайте города, создавайте армию и захватите мир!<br>
+            Враги (Рим, Галлия, Египет) уже строят планы против вас.
+        </div>
+        <button class="start-btn" onclick="startGame()">НАЧАТЬ ИГРУ</button>
     </div>
 
 <script>
 /**
- * REAL-TIME CIVILIZATION ENGINE
- * Полностью переписанный движок с чистым кодом и архитектурой.
+ * GAME ENGINE & LOGIC
  */
 
-// --- КОНФИГУРАЦИЯ ---
-const CONFIG = {
-    TILE_SIZE: 48,
-    MAP_WIDTH: 60,
-    MAP_HEIGHT: 60,
-    COLORS: {
-        WATER: '#4fa4b8',
-        GRASS: '#567d46',
-        FOREST: '#2d4a22',
-        MOUNTAIN: '#8c8c8c',
-        DESERT: '#e6c288',
-        HIGHLIGHT: 'rgba(255, 255, 255, 0.3)',
-        PLAYER: '#4ecca3',
-        ENEMY: '#e94560',
-        NEUTRAL: '#f1c40f'
-    },
-    TERRAIN_TYPES: ['WATER', 'GRASS', 'FOREST', 'MOUNTAIN', 'DESERT'],
-    UNITS: {
-        WARRIOR: { name: 'Воин', icon: '⚔️', cost: { gold: 50, food: 20 }, hp: 100, dmg: 15, range: 1, speed: 0.08 },
-        ARCHER: { name: 'Лучник', icon: '🏹', cost: { gold: 70, food: 30 }, hp: 80, dmg: 12, range: 3, speed: 0.07 },
-        CAVALRY: { name: 'Кавалерия', icon: '🐎', cost: { gold: 100, food: 50 }, hp: 120, dmg: 20, range: 1, speed: 0.12 },
-        SETTLER: { name: 'Поселенец', icon: '🚜', cost: { gold: 100, food: 50 }, hp: 50, dmg: 0, range: 0, speed: 0.05 }
-    },
-    BUILDINGS: {
-        HOUSE: { name: 'Дом', cost: { gold: 60 }, bonus: 'food' },
-        FORGE: { name: 'Кузница', cost: { gold: 100 }, bonus: 'prod' },
-        LIBRARY: { name: 'Библиотека', cost: { gold: 80 }, bonus: 'science' }
-    }
+// Constants
+const TILE_SIZE = 40;
+const MAP_WIDTH = 60;
+const MAP_HEIGHT = 60;
+const COLORS = {
+    player: '#4facfe',
+    enemy1: '#ff416c', // Rome
+    enemy2: '#43e97b', // Gaul
+    enemy3: '#fa709a', // Egypt
+    fog: '#0f0f1a'
 };
 
-// --- СОСТОЯНИЕ ИГРЫ ---
-let gameState = {
-    running: false,
-    lastTime: 0,
-    day: 1,
-    camera: { x: 0, y: 0, zoom: 1 },
-    map: [],
-    entities: [], // Города и юниты
-    particles: [],
-    selectedEntity: null,
-    resources: { gold: 200, food: 200, science: 0, culture: 0 },
-    techs: [],
-    playerColor: CONFIG.COLORS.PLAYER,
-    aiCivs: []
+const TERRAIN = {
+    GRASS: { color: '#4caf50', symbol: '🌿', cost: 1 },
+    FOREST: { color: '#2e7d32', symbol: '🌲', cost: 2 },
+    MOUNTAIN: { color: '#5d4037', symbol: '⛰️', cost: 3 },
+    WATER: { color: '#2196f3', symbol: '🌊', cost: 999 },
+    DESERT: { color: '#fdd835', symbol: '🏜️', cost: 2 }
 };
 
-// --- КЛАССЫ ---
+const UNITS = {
+    settler: { icon: '🚜', hp: 20, dmg: 0, range: 1, speed: 0.03, costGold: 100, costFood: 50 },
+    warrior: { icon: '⚔️', hp: 50, dmg: 10, range: 1, speed: 0.04, costGold: 60, costFood: 20 },
+    archer: { icon: '🏹', hp: 40, dmg: 15, range: 3, speed: 0.035, costGold: 80, costFood: 30 },
+    knight: { icon: '🐎', hp: 80, dmg: 20, range: 1, speed: 0.05, costGold: 150, costFood: 60 }
+};
 
-class Entity {
-    constructor(x, y, type, owner) {
-        this.id = Math.random().toString(36).substr(2, 9);
-        this.x = x;
-        this.y = y;
-        this.type = type; // 'city', 'unit'
-        this.subtype = null; // 'warrior', 'house', etc.
-        this.owner = owner; // 'player', 'ai_1', etc.
-        this.hp = 100;
-        this.maxHp = 100;
-        this.progress = 0; // Для производства
-        this.targetX = x;
-        this.targetY = y;
-        this.path = [];
-        this.action = 'idle'; // idle, move, attack, build
-        this.cooldown = 0;
-    }
-}
+// Utils
+const rand = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+const dist = (x1, y1, x2, y2) => Math.sqrt((x2-x1)**2 + (y2-y1)**2);
 
-class Particle {
-    constructor(x, y, text, color) {
-        this.x = x;
-        this.y = y;
-        this.text = text;
-        this.color = color;
-        this.life = 1.0;
-        this.vy = -0.5;
-    }
-    update() {
-        this.y += this.vy;
-        this.life -= 0.02;
-    }
-    draw(ctx) {
-        ctx.globalAlpha = Math.max(0, this.life);
-        ctx.fillStyle = this.color;
-        ctx.font = 'bold 16px Arial';
-        ctx.fillText(this.text, this.x, this.y);
-        ctx.globalAlpha = 1.0;
-    }
-}
-
-// --- СИСТЕМНЫЕ ФУНКЦИИ ---
-
-function init() {
-    resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
-    setupInput();
-    requestAnimationFrame(gameLoop);
-}
-
-function startGame() {
-    document.getElementById('main-menu').style.display = 'none';
-    generateMap();
-    spawnPlayer();
-    spawnAI();
-    gameState.running = true;
-    gameState.lastTime = performance.now();
-    showNotification("Добро пожаловать, Правитель!", "Ваша империя ждет величия.");
-    updateUI();
-}
-
-function generateMap() {
-    gameState.map = [];
-    for (let y = 0; y < CONFIG.MAP_HEIGHT; y++) {
-        let row = [];
-        for (let x = 0; x < CONFIG.MAP_WIDTH; x++) {
-            // Простая процедурная генерация
-            const rand = Math.random();
-            let type = 'GRASS';
-            if (rand < 0.15) type = 'WATER';
-            else if (rand < 0.25) type = 'FOREST';
-            else if (rand < 0.35) type = 'MOUNTAIN';
-            else if (rand < 0.45) type = 'DESERT';
-            
-            // Сглаживание (упрощенное)
-            if (x > 0 && row[x-1] === 'WATER' && Math.random() < 0.3) type = 'WATER';
-            
-            row.push({
-                x, y,
-                type: type,
-                color: CONFIG.COLORS[type],
-                resource: Math.random() > 0.9 ? 'gold' : null // Редкие ресурсы
-            });
-        }
-        gameState.map.push(row);
-    }
-    
-    // Центрируем камеру на игроке (примерно)
-    gameState.camera.x = (CONFIG.MAP_WIDTH * CONFIG.TILE_SIZE) / 2 - canvas.width / 2;
-    gameState.camera.y = (CONFIG.MAP_HEIGHT * CONFIG.TILE_SIZE) / 2 - canvas.height / 2;
-}
-
-function spawnPlayer() {
-    // Найти безопасное место
-    let sx = 10, sy = 10;
-    while(gameState.map[sy][sx].type === 'WATER') { sx++; }
-    
-    const city = new Entity(sx, sy, 'city', 'player');
-    city.subtype = 'capital';
-    city.hp = 500;
-    city.maxHp = 500;
-    gameState.entities.push(city);
-    
-    // Стартовый воин
-    const warrior = new Entity(sx + 1, sy, 'unit', 'player');
-    warrior.subtype = 'WARRIOR';
-    warrior.hp = CONFIG.UNITS.WARRIOR.hp;
-    warrior.maxHp = warrior.hp;
-    gameState.entities.push(warrior);
-}
-
-function spawnAI() {
-    const aiNames = ['Рим', 'Галлия', 'Египет'];
-    const colors = ['#e74c3c', '#9b59b6', '#f39c12'];
-    
-    aiNames.forEach((name, i) => {
-        let sx = Math.floor(Math.random() * (CONFIG.MAP_WIDTH - 20)) + 20;
-        let sy = Math.floor(Math.random() * (CONFIG.MAP_HEIGHT - 20)) + 20;
-        while(gameState.map[sy][sx].type === 'WATER') { sx = (sx + 1) % CONFIG.MAP_WIDTH; }
+class Game {
+    constructor() {
+        this.canvas = document.getElementById('gameCanvas');
+        this.ctx = this.canvas.getContext('2d');
+        this.minimapCanvas = document.getElementById('minimapCanvas');
+        this.mmCtx = this.minimapCanvas.getContext('2d');
         
-        const city = new Entity(sx, sy, 'city', `ai_${i}`);
-        city.subtype = 'capital';
-        city.hp = 500;
-        city.name = name;
-        city.color = colors[i];
-        gameState.entities.push(city);
+        this.resize();
+        window.addEventListener('resize', () => this.resize());
+
+        // State
+        this.map = [];
+        this.entities = []; // Cities and Units
+        this.particles = [];
+        this.camera = { x: 0, y: 0 };
+        this.dragStart = null;
+        this.selectedEntity = null;
+        this.day = 1;
+        this.lastTime = 0;
+        this.isRunning = false;
+
+        // Player Resources
+        this.player = {
+            gold: 200,
+            food: 200,
+            science: 0,
+            culture: 0,
+            techLevel: 0
+        };
+
+        // AI Factions
+        this.factions = [
+            { id: 0, name: "Вы", color: COLORS.player, isAI: false },
+            { id: 1, name: "Рим", color: COLORS.enemy1, isAI: true, aggression: 1.0 },
+            { id: 2, name: "Галлия", color: COLORS.enemy2, isAI: true, aggression: 0.8 },
+            { id: 3, name: "Египет", color: COLORS.enemy3, isAI: true, aggression: 0.6 }
+        ];
+
+        this.setupInput();
+        this.generateMap();
+        this.initWorld();
         
-        gameState.aiCivs.push({
-            id: `ai_${i}`,
-            name: name,
-            color: colors[i],
-            cities: [city],
-            units: [],
-            aggression: 0.5 + Math.random() * 0.5
-        });
-    });
-}
-
-// --- ИГРОВОЙ ЦИКЛ ---
-
-function gameLoop(timestamp) {
-    const dt = (timestamp - gameState.lastTime) / 1000;
-    gameState.lastTime = timestamp;
-
-    if (gameState.running) {
-        update(dt);
-        draw();
-        updateUI();
+        // Start Loop
+        requestAnimationFrame((t) => this.loop(t));
     }
 
-    requestAnimationFrame(gameLoop);
-}
-
-function update(dt) {
-    // День
-    gameState.day += dt * 0.1; // Замедленное время
-    
-    // Ресурсы (пассивный доход)
-    let goldInc = 1, foodInc = 1, sciInc = 0;
-    gameState.entities.forEach(e => {
-        if (e.owner === 'player' && e.type === 'city') {
-            goldInc += 2;
-            foodInc += 3;
-            sciInc += 1;
-            // Производство в городе
-            if (e.production) {
-                e.progress += dt * (e.hasForge ? 1.5 : 1);
-                if (e.progress >= 100) {
-                    completeProduction(e);
-                }
-            }
-        }
-        
-        // Движение юнитов
-        if (e.type === 'unit' && e.action === 'move') {
-            const dx = e.targetX - e.x;
-            const dy = e.targetY - e.y;
-            const dist = Math.sqrt(dx*dx + dy*dy);
-            const speed = CONFIG.UNITS[e.subtype].speed;
-            
-            if (dist < 0.1) {
-                e.x = e.targetX;
-                e.y = e.targetY;
-                e.action = 'idle';
-                e.path = [];
-            } else {
-                e.x += (dx / dist) * speed;
-                e.y += (dy / dist) * speed;
-            }
-        }
-        
-        // Бой (авто-атака)
-        if (e.type === 'unit' && e.owner.startsWith('ai_') || e.owner === 'player') {
-            if (e.cooldown > 0) e.cooldown -= dt;
-            if (e.cooldown <= 0) {
-                const target = findNearestEnemy(e);
-                const unitStats = CONFIG.UNITS[e.subtype];
-                if (target && getDist(e, target) <= (unitStats.range + 1)) {
-                    attack(e, target);
-                    e.cooldown = 2; // Секунды между атаками
-                }
-            }
-        }
-    });
-
-    // ИИ Логика
-    updateAI(dt);
-
-    // Частицы
-    gameState.particles = gameState.particles.filter(p => p.life > 0);
-    gameState.particles.forEach(p => p.update());
-
-    // Доход ресурсов
-    if (Math.floor(gameState.day) > Math.floor((gameState.day - dt))) {
-        gameState.resources.gold += goldInc;
-        gameState.resources.food += foodInc;
-        gameState.resources.science += sciInc;
+    resize() {
+        this.canvas.width = window.innerWidth;
+        this.canvas.height = window.innerHeight;
+        this.minimapCanvas.width = 200;
+        this.minimapCanvas.height = 200;
+        this.draw(); // Redraw immediately
     }
-}
 
-function findNearestEnemy(me) {
-    let nearest = null;
-    let minDst = 999;
-    gameState.entities.forEach(e => {
-        if (e.owner !== me.owner && e.type === 'unit' && e.hp > 0) {
-            const d = getDist(me, e);
-            if (d < minDst) {
-                minDst = d;
-                nearest = e;
-            }
-        }
-    });
-    return nearest;
-}
-
-function getDist(a, b) {
-    return Math.sqrt(Math.pow(a.x - b.x, 2) + Math.pow(a.y - b.y, 2));
-}
-
-function attack(attacker, defender) {
-    const dmg = CONFIG.UNITS[attacker.subtype]?.dmg || 10;
-    defender.hp -= dmg;
-    
-    // Эффект
-    gameState.particles.push(new Particle(
-        defender.x * CONFIG.TILE_SIZE, 
-        defender.y * CONFIG.TILE_SIZE, 
-        `-${dmg}`, '#e94560'
-    ));
-
-    if (defender.hp <= 0) {
-        killEntity(defender);
-        if (attacker.owner === 'player') {
-            gameState.resources.culture += 10;
-            showNotification("Победа!", `Враг уничтожен. +10 Культуры`);
-        }
-    }
-}
-
-function killEntity(e) {
-    gameState.entities = gameState.entities.filter(ent => ent !== e);
-    if (gameState.selectedEntity === e) {
-        gameState.selectedEntity = null;
-        updateSelectionPanel();
-    }
-}
-
-function completeProduction(city) {
-    const prod = city.production;
-    city.production = null;
-    city.progress = 0;
-    
-    if (prod.type === 'unit') {
-        const unit = new Entity(city.x + 1, city.y, 'unit', city.owner);
-        unit.subtype = prod.subtype;
-        const stats = CONFIG.UNITS[prod.subtype];
-        unit.hp = stats.hp;
-        unit.maxHp = stats.hp;
-        gameState.entities.push(unit);
-        showNotification("Готово", `${stats.name} создан в ${city.subtype === 'capital' ? 'столице' : 'городе'}`);
-    }
-}
-
-function updateAI(dt) {
-    gameState.aiCivs.forEach(ai => {
-        // Простая логика: если есть ресурсы, строить юнитов
-        // В полной версии тут был бы сложный менеджер ресурсов
-        const myUnits = gameState.entities.filter(e => e.owner === ai.id && e.type === 'unit');
-        const myCities = gameState.entities.filter(e => e.owner === ai.id && e.type === 'city');
-        
-        if (myCities.length > 0 && myUnits.length < myCities.length * 2) {
-            // Шанс создать юнита
-            if (Math.random() < 0.01) {
-                const city = myCities[0];
-                const types = ['WARRIOR', 'ARCHER'];
-                const type = types[Math.floor(Math.random() * types.length)];
+    generateMap() {
+        // Simple noise-like generation
+        for (let y = 0; y < MAP_HEIGHT; y++) {
+            const row = [];
+            for (let x = 0; x < MAP_WIDTH; x++) {
+                const r = Math.random();
+                let type = 'GRASS';
+                if (r > 0.85) type = 'FOREST';
+                else if (r > 0.95) type = 'MOUNTAIN';
+                else if (r < 0.05) type = 'WATER';
+                else if (r > 0.75 && r < 0.80) type = 'DESERT';
                 
-                // Мгновенное создание для простоты ИИ в демо
-                const unit = new Entity(city.x + (Math.random()*4-2), city.y + (Math.random()*4-2), 'unit', ai.id);
-                unit.subtype = type;
-                unit.hp = CONFIG.UNITS[type].hp;
-                gameState.entities.push(unit);
+                row.push({ type, x, y, visible: false });
             }
+            this.map.push(row);
         }
         
-        // Движение к игроку (агрессия)
-        myUnits.forEach(u => {
-            if (u.action === 'idle' && Math.random() < 0.02) {
-                const playerCity = gameState.entities.find(e => e.owner === 'player' && e.type === 'city');
-                if (playerCity) {
-                    u.targetX = playerCity.x;
-                    u.targetY = playerCity.y;
-                    u.action = 'move';
+        // Clear spawn area for player
+        for(let y=25; y<35; y++) {
+            for(let x=25; x<35; x++) {
+                if(this.map[y] && this.map[y][x]) this.map[y][x].type = 'GRASS';
+            }
+        }
+    }
+
+    initWorld() {
+        // Spawn Player
+        this.spawnCity(30, 30, 0);
+        this.spawnUnit(32, 30, 'warrior', 0);
+        this.spawnUnit(28, 30, 'settler', 0);
+
+        // Spawn AI
+        this.spawnCity(10, 10, 1);
+        this.spawnCity(50, 10, 2);
+        this.spawnCity(10, 50, 3);
+        
+        // Initial AI units
+        for(let i=1; i<=3; i++) {
+            this.spawnUnit(12, 12, 'warrior', i);
+            this.spawnUnit(48, 12, 'warrior', i);
+            this.spawnUnit(12, 48, 'warrior', i);
+        }
+    }
+
+    spawnCity(x, y, factionId) {
+        this.entities.push({
+            type: 'city',
+            x: x, y: y,
+            faction: factionId,
+            hp: 200,
+            maxHp: 200,
+            production: 0,
+            producing: null
+        });
+        this.notify(`${this.factions[factionId].name} основал город!`);
+    }
+
+    spawnUnit(x, y, unitKey, factionId) {
+        const stats = UNITS[unitKey];
+        this.entities.push({
+            type: 'unit',
+            key: unitKey,
+            x: x, y: y,
+            targetX: x, targetY: y,
+            faction: factionId,
+            hp: stats.hp,
+            maxHp: stats.hp,
+            dmg: stats.dmg,
+            range: stats.range,
+            speed: stats.speed,
+            state: 'idle', // idle, moving, attacking
+            actionTimer: 0
+        });
+    }
+
+    setupInput() {
+        // Mouse Down
+        this.canvas.addEventListener('mousedown', (e) => {
+            if (!this.isRunning) return;
+            const rect = this.canvas.getBoundingClientRect();
+            const mx = e.clientX - rect.left;
+            const my = e.clientY - rect.top;
+            
+            // Convert to world coords
+            const wx = mx - this.camera.x;
+            const wy = my - this.camera.y;
+            const tx = Math.floor(wx / TILE_SIZE);
+            const ty = Math.floor(wy / TILE_SIZE);
+
+            if (e.button === 0) { // Left Click
+                // Check entity selection
+                const clickedEntity = this.entities.find(ent => 
+                    Math.abs(ent.x - tx) < 1 && Math.abs(ent.y - ty) < 1 &&
+                    ent.faction === 0 // Can only select own units directly by click
+                );
+
+                if (clickedEntity) {
+                    this.selectedEntity = clickedEntity;
+                } else {
+                    // Start dragging camera if no entity selected
+                    this.dragStart = { x: mx, y: my, camX: this.camera.x, camY: this.camera.y };
+                    this.selectedEntity = null;
+                }
+            } else if (e.button === 2) { // Right Click
+                e.preventDefault();
+                if (this.selectedEntity && this.selectedEntity.faction === 0) {
+                    this.issueCommand(this.selectedEntity, tx, ty);
                 }
             }
         });
-    });
-}
 
-// --- ОТРИСОВКА ---
-
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
-const minimapCanvas = document.getElementById('minimap');
-const mmCtx = minimapCanvas.getContext('2d');
-
-function resizeCanvas() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    minimapCanvas.width = 150;
-    minimapCanvas.height = 150;
-}
-
-function draw() {
-    // Очистка
-    ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    const ts = CONFIG.TILE_SIZE;
-    const camX = Math.floor(gameState.camera.x / ts);
-    const camY = Math.floor(gameState.camera.y / ts);
-    const cols = Math.ceil(canvas.width / ts) + 1;
-    const rows = Math.ceil(canvas.height / ts) + 1;
-
-    ctx.save();
-    ctx.translate(-gameState.camera.x, -gameState.camera.y);
-
-    // Карта
-    for (let y = camY; y < camY + rows; y++) {
-        for (let x = camX; x < camX + cols; x++) {
-            if (y >= 0 && y < CONFIG.MAP_HEIGHT && x >= 0 && x < CONFIG.MAP_WIDTH) {
-                const tile = gameState.map[y][x];
-                ctx.fillStyle = tile.color;
-                ctx.fillRect(x * ts, y * ts, ts, ts);
-                
-                // Детали
-                if (tile.type === 'FOREST') {
-                    ctx.fillStyle = 'rgba(0,0,0,0.2)';
-                    ctx.beginPath();
-                    ctx.arc(x*ts+ts/2, y*ts+ts/2, ts/3, 0, Math.PI*2);
-                    ctx.fill();
-                } else if (tile.type === 'MOUNTAIN') {
-                    ctx.fillStyle = 'rgba(0,0,0,0.3)';
-                    ctx.beginPath();
-                    ctx.moveTo(x*ts+ts/2, y*ts+5);
-                    ctx.lineTo(x*ts+ts-5, y*ts+ts-5);
-                    ctx.lineTo(x*ts+5, y*ts+ts-5);
-                    ctx.fill();
-                }
+        // Mouse Move (Drag)
+        window.addEventListener('mousemove', (e) => {
+            if (this.dragStart) {
+                const rect = this.canvas.getBoundingClientRect();
+                const dx = e.clientX - rect.left - this.dragStart.x;
+                const dy = e.clientY - rect.top - this.dragStart.y;
+                this.camera.x = this.dragStart.camX + dx;
+                this.camera.y = this.dragStart.camY + dy;
             }
-        }
+        });
+
+        // Mouse Up
+        window.addEventListener('mouseup', () => {
+            this.dragStart = null;
+        });
+
+        // Context Menu Disable
+        this.canvas.addEventListener('contextmenu', e => e.preventDefault());
+        
+        // Zoom disable (wheel)
+        this.canvas.addEventListener('wheel', e => e.preventDefault(), { passive: false });
     }
 
-    // Сущности
-    gameState.entities.forEach(e => {
-        const cx = e.x * ts + ts/2;
-        const cy = e.y * ts + ts/2;
+    issueCommand(unit, tx, ty) {
+        // Check bounds
+        if (tx < 0 || tx >= MAP_WIDTH || ty < 0 || ty >= MAP_HEIGHT) return;
         
-        // Тень
-        ctx.fillStyle = 'rgba(0,0,0,0.4)';
-        ctx.beginPath();
-        ctx.ellipse(cx, cy + ts/3, ts/3, ts/6, 0, 0, Math.PI*2);
-        ctx.fill();
-
-        // Цвет владельца (кольцо)
-        const color = e.owner === 'player' ? CONFIG.COLORS.PLAYER : 
-                      (gameState.aiCivs.find(a => a.id === e.owner)?.color || '#fff');
-        
-        ctx.strokeStyle = color;
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.arc(cx, cy, ts/2 - 2, 0, Math.PI*2);
-        ctx.stroke();
-
-        // Иконка
-        ctx.font = '24px Arial';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        let icon = '❓';
-        if (e.type === 'city') icon = e.subtype === 'capital' ? '🏙️' : '🏰';
-        else if (e.subtype) icon = CONFIG.UNITS[e.subtype].icon;
-        
-        ctx.fillText(icon, cx, cy);
-
-        // Выделение
-        if (gameState.selectedEntity === e) {
-            ctx.strokeStyle = '#fff';
-            ctx.lineWidth = 2;
-            ctx.setLineDash([5, 3]);
-            ctx.beginPath();
-            ctx.arc(cx, cy, ts/2 + 4, 0, Math.PI*2);
-            ctx.stroke();
-            ctx.setLineDash([]);
-        }
-
-        // HP Bar
-        if (e.hp < e.maxHp) {
-            const pct = e.hp / e.maxHp;
-            ctx.fillStyle = '#333';
-            ctx.fillRect(cx - 15, cy - ts/2 - 8, 30, 4);
-            ctx.fillStyle = pct > 0.5 ? '#2ecc71' : '#e74c3c';
-            ctx.fillRect(cx - 15, cy - ts/2 - 8, 30 * pct, 4);
-        }
-        
-        // Прогресс строительства
-        if (e.production) {
-            ctx.fillStyle = '#f1c40f';
-            ctx.fillRect(cx - 15, cy + ts/2 + 2, 30 * (e.progress/100), 3);
-        }
-    });
-
-    // Частицы
-    gameState.particles.forEach(p => p.draw(ctx));
-
-    // Курсор действия (при движении)
-    if (mouse.dragging) {
-        // Рисуем рамку перетаскивания если нужно, но пока просто курсор
-    }
-
-    ctx.restore();
-
-    // Миникарта
-    drawMinimap();
-}
-
-function drawMinimap() {
-    mmCtx.fillStyle = '#000';
-    mmCtx.fillRect(0, 0, 150, 150);
-    
-    const scale = 150 / (CONFIG.MAP_WIDTH * CONFIG.TILE_SIZE); // Очень мелко
-    
-    // Упрощенно: рисуем точки
-    gameState.entities.forEach(e => {
-        const mx = e.x * CONFIG.TILE_SIZE * scale;
-        const my = e.y * CONFIG.TILE_SIZE * scale;
-        mmCtx.fillStyle = e.owner === 'player' ? '#4ecca3' : '#e94560';
-        mmCtx.fillRect(mx, my, 3, 3);
-    });
-    
-    // Камера на миникарте
-    const cx = gameState.camera.x * scale;
-    const cy = gameState.camera.y * scale;
-    const cw = canvas.width * scale;
-    const ch = canvas.height * scale;
-    
-    mmCtx.strokeStyle = '#fff';
-    mmCtx.lineWidth = 1;
-    mmCtx.strokeRect(cx, cy, cw, ch);
-}
-
-// --- УПРАВЛЕНИЕ И ВВОД ---
-
-const mouse = { x: 0, y: 0, isDown: false, dragStartX: 0, dragStartY: 0, dragging: false };
-
-function setupInput() {
-    canvas.addEventListener('mousedown', e => {
-        if (e.button === 0) { // ЛКМ
-            mouse.isDown = true;
-            mouse.dragStartX = e.clientX;
-            mouse.dragStartY = e.clientY;
-            mouse.dragging = false; // Пока не знаем
-            
-            // Проверка клика по объекту
-            handleLeftClick(e.clientX, e.clientY);
-        } else if (e.button === 2) { // ПКМ
-            e.preventDefault();
-            handleRightClick(e.clientX, e.clientY);
-        }
-    });
-
-    canvas.addEventListener('mousemove', e => {
-        mouse.x = e.clientX;
-        mouse.y = e.clientY;
-        
-        if (mouse.isDown) {
-            const dx = e.clientX - mouse.dragStartX;
-            const dy = e.clientY - mouse.dragStartY;
-            if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
-                mouse.dragging = true;
-                gameState.camera.x -= dx;
-                gameState.camera.y -= dy;
-                mouse.dragStartX = e.clientX;
-                mouse.dragStartY = e.clientY;
-            }
-        }
-    });
-
-    canvas.addEventListener('mouseup', () => {
-        mouse.isDown = false;
-        mouse.dragging = false;
-    });
-
-    canvas.addEventListener('contextmenu', e => e.preventDefault());
-    
-    // Закрытие контекстного меню при клике в пустоту
-    document.addEventListener('click', (e) => {
-        if (!e.target.closest('#context-menu') && !e.target.closest('#gameCanvas')) {
-            hideContextMenu();
-        }
-    });
-}
-
-function getTileFromScreen(sx, sy) {
-    const tx = (sx + gameState.camera.x) / CONFIG.TILE_SIZE;
-    const ty = (sy + gameState.camera.y) / CONFIG.TILE_SIZE;
-    return { x: Math.floor(tx), y: Math.floor(ty) };
-}
-
-function handleLeftClick(sx, sy) {
-    if (mouse.dragging) return; // Это было перетаскивание
-
-    const t = getTileFromScreen(sx, sy);
-    let clickedEntity = null;
-    
-    // Ищем сущность в тайле
-    gameState.entities.forEach(e => {
-        if (Math.abs(e.x - t.x) < 0.8 && Math.abs(e.y - t.y) < 0.8) {
-            clickedEntity = e;
-        }
-    });
-
-    gameState.selectedEntity = clickedEntity;
-    updateSelectionPanel();
-    hideContextMenu();
-}
-
-function handleRightClick(sx, sy) {
-    if (!gameState.selectedEntity || gameState.selectedEntity.type !== 'unit') {
-        hideContextMenu();
-        return;
-    }
-
-    const t = getTileFromScreen(sx, sy);
-    const unit = gameState.selectedEntity;
-    
-    // Проверяем, есть ли враг в этой клетке
-    const enemy = gameState.entities.find(e => 
-        e.owner !== unit.owner && 
-        Math.abs(e.x - t.x) < 0.8 && 
-        Math.abs(e.y - t.y) < 0.8 &&
-        e.type === 'unit'
-    );
-
-    if (enemy) {
-        // Атака
-        unit.targetX = enemy.x;
-        unit.targetY = enemy.y;
-        unit.action = 'move'; // Двинуться к врагу, бой начнется автоматически при сближении
-        showNotification("Атака!", `Юнит атакует ${enemy.subtype || 'цель'}`);
-    } else {
-        // Движение
-        // Проверка на воду
-        const tile = gameState.map[t.y]?.[t.x];
-        if (tile && tile.type === 'WATER') {
-            showNotification("Нельзя", "Юниты не могут ходить по воде!");
+        // Check terrain
+        const tile = this.map[ty][tx];
+        if (tile.type === 'WATER' || tile.type === 'MOUNTAIN') {
+            this.notify("Нельзя идти сюда!");
             return;
         }
-        unit.targetX = t.x;
-        unit.targetY = t.y;
-        unit.action = 'move';
-        createClickEffect(t.x, t.y);
+
+        // Check for enemy
+        const target = this.entities.find(e => 
+            Math.floor(e.x) === tx && Math.floor(e.y) === ty && e.faction !== unit.faction
+        );
+
+        if (target) {
+            // Attack
+            unit.state = 'attacking';
+            unit.target = target;
+            this.createParticle(tx * TILE_SIZE, ty * TILE_SIZE, '💥');
+        } else {
+            // Move
+            unit.state = 'moving';
+            unit.targetX = tx;
+            unit.targetY = ty;
+            this.createParticle(tx * TILE_SIZE, ty * TILE_SIZE, '🎯');
+        }
     }
-    
-    hideContextMenu();
-}
 
-function createClickEffect(x, y) {
-    // Визуальный эффект клика (можно добавить частицы)
-}
-
-// --- ИНТЕРФЕЙС ---
-
-function updateUI() {
-    document.getElementById('res-gold').innerText = Math.floor(gameState.resources.gold);
-    document.getElementById('res-food').innerText = Math.floor(gameState.resources.food);
-    document.getElementById('res-science').innerText = Math.floor(gameState.resources.science);
-    document.getElementById('res-culture').innerText = Math.floor(gameState.resources.culture);
-    document.getElementById('game-day').innerText = Math.floor(gameState.day);
-    
-    updateActionsPanel();
-}
-
-function updateSelectionPanel() {
-    const panelName = document.getElementById('sel-name');
-    const panelDesc = document.getElementById('sel-desc');
-    const panelStats = document.getElementById('sel-stats');
-    
-    if (!gameState.selectedEntity) {
-        panelName.innerText = "Ничего не выбрано";
-        panelDesc.innerText = "Кликните ЛКМ по городу или юниту.";
-        panelStats.innerText = "";
-        return;
+    createParticle(x, y, text) {
+        this.particles.push({ x, y, text, life: 1.0, vy: -1 });
     }
-    
-    const e = gameState.selectedEntity;
-    if (e.type === 'city') {
-        panelName.innerText = e.subtype === 'capital' ? "Столица" : "Город";
-        panelName.style.color = e.owner === 'player' ? CONFIG.COLORS.PLAYER : CONFIG.COLORS.ENEMY;
-        panelDesc.innerText = "Производит ресурсы и юнитов.";
-        panelStats.innerText = `HP: ${Math.floor(e.hp)}/${e.maxHp}\nДоход: +2💰 +3🍞`;
-    } else if (e.type === 'unit') {
-        const stats = CONFIG.UNITS[e.subtype];
-        panelName.innerText = stats.name;
-        panelName.style.color = e.owner === 'player' ? CONFIG.COLORS.PLAYER : CONFIG.COLORS.ENEMY;
-        panelDesc.innerText = `Скорость: ${stats.speed*100} | Урон: ${stats.dmg}`;
-        panelStats.innerText = `HP: ${Math.floor(e.hp)}/${e.maxHp}\nПравая кнопка мыши для движения.`;
-    }
-}
 
-function updateActionsPanel() {
-    const panel = document.getElementById('actions-panel');
-    panel.innerHTML = '';
-    
-    if (!gameState.selectedEntity || gameState.selectedEntity.owner !== 'player') {
-        panel.innerHTML = '<div style="grid-column: span 3; text-align: center; color: #777;">Выберите свой объект</div>';
-        return;
+    notify(msg) {
+        const div = document.createElement('div');
+        div.className = 'toast';
+        div.innerText = msg;
+        document.getElementById('notifications').appendChild(div);
+        setTimeout(() => div.remove(), 3000);
     }
-    
-    const e = gameState.selectedEntity;
-    
-    if (e.type === 'city') {
-        // Кнопки постройки
-        createBtn(panel, '⚔️', 'Воин', '50💰 20🍞', () => queueProduction(e, 'unit', 'WARRIOR'));
-        createBtn(panel, '🏹', 'Лучник', '70💰 30🍞', () => queueProduction(e, 'unit', 'ARCHER'));
-        createBtn(panel, '🚜', 'Поселенец', '100💰 50🍞', () => queueProduction(e, 'unit', 'SETTLER'));
-        createBtn(panel, '🏠', 'Дом', '60💰', () => queueProduction(e, 'building', 'HOUSE'));
-        createBtn(panel, '🔨', 'Кузница', '100💰', () => queueProduction(e, 'building', 'FORGE'));
-        createBtn(panel, '📚', 'Библиотека', '80💰', () => queueProduction(e, 'building', 'LIBRARY'));
-    } else if (e.type === 'unit') {
-        createBtn(panel, '🛑', 'Стоп', '', () => { e.action = 'idle'; });
-        createBtn(panel, '🔍', 'Разведка', '', () => { 
-            // Случайное движение для примера
-            e.targetX = e.x + Math.floor(Math.random()*10-5);
-            e.targetY = e.y + Math.floor(Math.random()*10-5);
-            e.action = 'move';
+
+    update(dt) {
+        if (!this.isRunning) return;
+
+        this.day += dt * 0.1; // Time flow
+        document.getElementById('turnTime').innerText = `Day ${Math.floor(this.day)}`;
+
+        // Resource Generation (Passive)
+        if (Math.floor(this.day) % 1 === 0 && Math.floor(this.day * 10) % 10 === 0) {
+            // Simplified: every second roughly
+            let goldGen = 0, foodGen = 0, sciGen = 0;
+            this.entities.forEach(e => {
+                if (e.type === 'city' && e.faction === 0) {
+                    goldGen += 5; foodGen += 5; sciGen += 2;
+                }
+            });
+            this.player.gold += goldGen * dt;
+            this.player.food += foodGen * dt;
+            this.player.science += sciGen * dt;
+            this.updateUI();
+        }
+
+        // Entity Logic
+        this.entities.forEach((e, index) => {
+            if (e.type === 'unit') {
+                // Movement
+                if (e.state === 'moving') {
+                    const dx = e.targetX - e.x;
+                    const dy = e.targetY - e.y;
+                    const d = Math.sqrt(dx*dx + dy*dy);
+                    
+                    if (d < 0.1) {
+                        e.x = e.targetX;
+                        e.y = e.targetY;
+                        e.state = 'idle';
+                    } else {
+                        e.x += (dx / d) * e.speed;
+                        e.y += (dy / d) * e.speed;
+                    }
+                }
+                
+                // Combat (Auto attack if enemy near and idle)
+                if (e.state === 'idle' && e.faction !== 0) {
+                    // AI Logic: Find nearest enemy
+                    let nearest = null;
+                    let minDist = 5; // Aggro range
+                    this.entities.forEach(other => {
+                        if (other.faction !== e.faction && other.type === 'unit') {
+                            const d = dist(e.x, e.y, other.x, other.y);
+                            if (d < minDist) { minDist = d; nearest = other; }
+                        }
+                    });
+                    if (nearest) {
+                        e.state = 'attacking';
+                        e.target = nearest;
+                    }
+                }
+
+                if (e.state === 'attacking' && e.target) {
+                    const d = dist(e.x, e.y, e.target.x, e.target.y);
+                    if (d <= e.range + 0.5) {
+                        // Attack cooldown
+                        e.actionTimer += dt;
+                        if (e.actionTimer > 1.0) { // 1 sec per attack
+                            e.target.hp -= e.dmg;
+                            this.createParticle(e.target.x * TILE_SIZE, e.target.y * TILE_SIZE, `-${e.dmg}`);
+                            e.actionTimer = 0;
+                            
+                            if (e.target.hp <= 0) {
+                                // Kill
+                                const tIdx = this.entities.indexOf(e.target);
+                                if (tIdx > -1) this.entities.splice(tIdx, 1);
+                                e.state = 'idle';
+                                e.target = null;
+                                if (e.faction === 0) this.notify("Враг уничтожен!");
+                            }
+                        }
+                    } else {
+                        // Chase
+                        e.state = 'moving';
+                        e.targetX = e.target.x;
+                        e.targetY = e.target.y;
+                    }
+                }
+            }
+        });
+
+        // Cleanup dead entities
+        this.entities = this.entities.filter(e => e.hp > 0);
+
+        // Particles
+        this.particles.forEach(p => {
+            p.y += p.vy;
+            p.life -= dt;
+        });
+        this.particles = this.particles.filter(p => p.life > 0);
+
+        // AI Turns (Simple simulation)
+        if (Math.floor(this.day * 2) % 20 === 0) {
+            this.runAI();
+        }
+
+        this.updateUI();
+    }
+
+    runAI() {
+        this.factions.forEach(f => {
+            if (!f.isAI) return;
+            // Simple AI: Spawn random unit near city if rich enough
+            const cities = this.entities.filter(e => e.type === 'city' && e.faction === f.id);
+            if (cities.length > 0 && Math.random() > 0.7) {
+                const c = cities[0];
+                const types = ['warrior', 'archer'];
+                const type = types[rand(0, types.length-1)];
+                this.spawnUnit(c.x + rand(-2, 2), c.y + rand(-2, 2), type, f.id);
+            }
         });
     }
-}
 
-function createBtn(parent, icon, text, cost, onClick) {
-    const btn = document.createElement('button');
-    btn.innerHTML = `<span class="btn-icon">${icon}</span><span>${text}</span><span style="font-size:10px; opacity:0.7">${cost}</span>`;
-    
-    // Проверка доступности (упрощенная)
-    if (cost.includes('💰')) {
-        const c = parseInt(cost);
-        if (gameState.resources.gold < c) btn.disabled = true;
+    trainUnit(type) {
+        if (!this.selectedEntity || this.selectedEntity.type !== 'city' || this.selectedEntity.faction !== 0) {
+            this.notify("Выберите свой город!");
+            return;
+        }
+
+        const costG = UNITS[type].costGold;
+        const costF = UNITS[type].costFood;
+
+        if (this.player.gold >= costG && this.player.food >= costF) {
+            this.player.gold -= costG;
+            this.player.food -= costF;
+            this.spawnUnit(this.selectedEntity.x + 1, this.selectedEntity.y, type, 0);
+            this.notify(`Обучен ${type}!`);
+            this.updateUI();
+        } else {
+            this.notify("Недостаточно ресурсов!");
+        }
     }
-    
-    btn.onclick = onClick;
-    parent.appendChild(btn);
-}
 
-function queueProduction(city, type, subtype) {
-    if (city.production) {
-        showNotification("Очередь", "Город уже что-то строит!");
-        return;
+    researchTech() {
+        if (this.player.science >= 200) {
+            this.player.science -= 200;
+            this.player.techLevel++;
+            this.notify(`Технология изучена! Уровень ${this.player.techLevel}`);
+            // Bonus
+            this.player.gold += 100;
+            this.updateUI();
+        } else {
+            this.notify("Нужно 200 науки!");
+        }
     }
-    
-    let costGold = 0, costFood = 0;
-    if (type === 'unit') {
-        costGold = CONFIG.UNITS[subtype].cost.gold;
-        costFood = CONFIG.UNITS[subtype].cost.food;
-    } else {
-        costGold = CONFIG.BUILDINGS[subtype].cost.gold;
+
+    updateUI() {
+        document.getElementById('resGold').innerText = Math.floor(this.player.gold);
+        document.getElementById('resFood').innerText = Math.floor(this.player.food);
+        document.getElementById('resScience').innerText = Math.floor(this.player.science);
+        document.getElementById('resCulture').innerText = Math.floor(this.player.culture);
     }
-    
-    if (gameState.resources.gold >= costGold && gameState.resources.food >= costFood) {
-        gameState.resources.gold -= costGold;
-        gameState.resources.food -= costFood;
-        city.production = { type, subtype };
-        city.progress = 0;
-        showNotification("Строительство", `${subtype || type} начал строиться`);
-        updateUI();
-    } else {
-        showNotification("Не хватает ресурсов!", `Нужно: ${costGold}💰 ${costFood}🍞`);
+
+    draw() {
+        // Clear
+        this.ctx.fillStyle = '#0f0f1a';
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+        this.ctx.save();
+        this.ctx.translate(this.camera.x, this.camera.y);
+
+        // Draw Map (Culling for performance)
+        const startCol = Math.floor(-this.camera.x / TILE_SIZE);
+        const endCol = startCol + (this.canvas.width / TILE_SIZE) + 1;
+        const startRow = Math.floor(-this.camera.y / TILE_SIZE);
+        const endRow = startRow + (this.canvas.height / TILE_SIZE) + 1;
+
+        for (let y = startRow; y <= endRow; y++) {
+            for (let x = startCol; x <= endCol; x++) {
+                if (y >= 0 && y < MAP_HEIGHT && x >= 0 && x < MAP_WIDTH) {
+                    const tile = this.map[y][x];
+                    const tx = x * TILE_SIZE;
+                    const ty = y * TILE_SIZE;
+                    
+                    // Base
+                    this.ctx.fillStyle = TERRAIN[tile.type].color;
+                    this.ctx.fillRect(tx, ty, TILE_SIZE, TILE_SIZE);
+                    
+                    // Grid lines (subtle)
+                    this.ctx.strokeStyle = 'rgba(0,0,0,0.1)';
+                    this.ctx.strokeRect(tx, ty, TILE_SIZE, TILE_SIZE);
+
+                    // Symbol
+                    this.ctx.font = '20px Arial';
+                    this.ctx.textAlign = 'center';
+                    this.ctx.textBaseline = 'middle';
+                    this.ctx.fillStyle = 'rgba(255,255,255,0.8)';
+                    this.ctx.fillText(TERRAIN[tile.type].symbol, tx + TILE_SIZE/2, ty + TILE_SIZE/2);
+                }
+            }
+        }
+
+        // Draw Entities
+        this.entities.forEach(e => {
+            const ex = e.x * TILE_SIZE + TILE_SIZE/2;
+            const ey = e.y * TILE_SIZE + TILE_SIZE/2;
+            
+            // Shadow
+            this.ctx.fillStyle = 'rgba(0,0,0,0.3)';
+            this.ctx.beginPath();
+            this.ctx.arc(ex, ey + 5, TILE_SIZE/3, 0, Math.PI*2);
+            this.ctx.fill();
+
+            // Icon
+            let icon = '';
+            if (e.type === 'city') icon = e.faction === 0 ? '🏰' : '🏯';
+            else icon = UNITS[e.key].icon;
+
+            this.ctx.font = '30px Arial';
+            this.ctx.textAlign = 'center';
+            this.ctx.textBaseline = 'middle';
+            
+            // Selection Ring
+            if (this.selectedEntity === e) {
+                this.ctx.strokeStyle = '#fff';
+                this.ctx.lineWidth = 2;
+                this.ctx.beginPath();
+                this.ctx.arc(ex, ey, TILE_SIZE/1.5, 0, Math.PI*2);
+                this.ctx.stroke();
+                
+                // Glow
+                this.ctx.shadowColor = this.factions[e.faction].color;
+                this.ctx.shadowBlur = 15;
+            }
+
+            this.ctx.fillStyle = this.factions[e.faction].color;
+            this.ctx.fillText(icon, ex, ey);
+            this.ctx.shadowBlur = 0;
+
+            // Health Bar
+            if (e.hp < e.maxHp) {
+                const pct = e.hp / e.maxHp;
+                this.ctx.fillStyle = 'red';
+                this.ctx.fillRect(ex - 15, ey - 25, 30, 4);
+                this.ctx.fillStyle = '#0f0';
+                this.ctx.fillRect(ex - 15, ey - 25, 30 * pct, 4);
+            }
+        });
+
+        // Particles
+        this.particles.forEach(p => {
+            this.ctx.globalAlpha = p.life;
+            this.ctx.font = '20px Arial';
+            this.ctx.fillStyle = '#fff';
+            this.ctx.fillText(p.text, p.x, p.y);
+            this.ctx.globalAlpha = 1.0;
+        });
+
+        this.ctx.restore();
+
+        // Draw Minimap
+        this.drawMinimap();
+    }
+
+    drawMinimap() {
+        const w = this.minimapCanvas.width;
+        const h = this.minimapCanvas.height;
+        const scaleX = w / MAP_WIDTH;
+        const scaleY = h / MAP_HEIGHT;
+
+        this.mmCtx.fillStyle = '#000';
+        this.mmCtx.fillRect(0, 0, w, h);
+
+        this.entities.forEach(e => {
+            this.mmCtx.fillStyle = this.factions[e.faction].color;
+            const mx = e.x * scaleX;
+            const my = e.y * scaleY;
+            const size = e.type === 'city' ? 4 : 2;
+            this.mmCtx.fillRect(mx - size/2, my - size/2, size, size);
+        });
+
+        // Camera Viewport on Minimap
+        this.mmCtx.strokeStyle = 'white';
+        this.mmCtx.lineWidth = 1;
+        const vx = -this.camera.x * scaleX;
+        const vy = -this.camera.y * scaleY;
+        const vw = this.canvas.width * scaleX;
+        const vh = this.canvas.height * scaleY;
+        this.mmCtx.strokeRect(vx, vy, vw, vh);
+    }
+
+    loop(timestamp) {
+        const dt = (timestamp - this.lastTime) / 1000;
+        this.lastTime = timestamp;
+
+        if (this.isRunning) {
+            this.update(dt);
+            this.draw();
+        }
+        
+        requestAnimationFrame((t) => this.loop(t));
     }
 }
 
-function showNotification(title, msg) {
-    const container = document.getElementById('notifications');
-    const el = document.createElement('div');
-    el.className = 'toast';
-    el.innerHTML = `<strong>${title}</strong><br>${msg}`;
-    container.appendChild(el);
-    setTimeout(() => el.remove(), 3000);
-}
+// Global Instance
+let game;
 
-function hideContextMenu() {
-    document.getElementById('context-menu').style.display = 'none';
+function startGame() {
+    document.getElementById('mainMenu').classList.add('hidden');
+    game = new Game();
+    game.isRunning = true;
 }
-
-// Запуск
-init();
 
 </script>
 </body>
