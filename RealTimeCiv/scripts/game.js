@@ -1,5 +1,5 @@
 // Real-Time Civilization Game Engine
-// Modern graphics with gradients, shadows, animations, and particle effects
+// Полная переработка с ИИ, управлением юнитами и современной графикой
 
 class Game {
     constructor() {
@@ -7,81 +7,131 @@ class Game {
         this.ctx = this.canvas.getContext('2d');
         this.minimapCanvas = document.getElementById('minimap');
         this.minimapCtx = this.minimapCanvas.getContext('2d');
-        
-        this.mapWidth = 50;
-        this.mapHeight = 50;
-        this.tileSize = 40;
+
+        this.mapWidth = 60;
+        this.mapHeight = 60;
+        this.tileSize = 48;
         this.cameraX = 0;
         this.cameraY = 0;
         this.isDragging = false;
         this.lastMouseX = 0;
         this.lastMouseY = 0;
-        this.hoveredTile = null;
         this.selectedUnit = null;
-        this.particles = [];
+        this.hoveredTile = null;
         
-        // Terrain types with beautiful colors
+        // Ассеты (эмодзи)
+        this.assets = {
+            terrain: {
+                plains: '🌾',
+                forest: '🌲',
+                mountains: '🏔️',
+                desert: '🏜️',
+                water: '🌊'
+            },
+            units: {
+                warrior: '⚔️',
+                archer: '🏹',
+                cavalry: '🐴',
+                settler: '🏗️'
+            },
+            city: '🏰',
+            resources: {
+                wheat: '🌾',
+                gold: '💰',
+                stone: '🪨',
+                horse: '🐎'
+            }
+        };
+
+        // Типы местности
         this.terrainTypes = {
-           平原: { color: '#7cb342', color2: '#8bc34a', name: 'Равнина' },
-            лес: { color: '#2d5a27', color2: '#388e3c', name: 'Лес' },
-            горы: { color: '#8b7355', color2: '#a1887f', name: 'Горы' },
-            пустыня: { color: '#d4c685', color2: '#e6c896', name: 'Пустыня' },
-            вода: { color: '#4a9eff', color2: '#64b5f6', name: 'Вода' }
+            plains: { color: '#7cb342', color2: '#8bc34a', name: 'Равнина', defense: 0, movement: 1 },
+            forest: { color: '#2d5a27', color2: '#388e3c', name: 'Лес', defense: 1, movement: 2 },
+            mountains: { color: '#5d4037', color2: '#795548', name: 'Горы', defense: 3, movement: 3, impassable: true },
+            desert: { color: '#d4c685', color2: '#e6c896', name: 'Пустыня', defense: 0, movement: 1 },
+            water: { color: '#1976d2', color2: '#2196f3', name: 'Вода', defense: 0, movement: 3, impassable: true }
         };
-        
-        // Resources
+
+        // Ресурсы игрока
         this.resources = {
-            food: 200,
-            gold: 150,
+            food: 300,
+            gold: 200,
             science: 0,
             culture: 0
         };
-        
+
         this.resourceRates = {
-            food: 0,
-            gold: 0,
+            food: 5,
+            gold: 3,
             science: 0,
             culture: 0
         };
-        
+
+        // Города и юниты
         this.cities = [];
         this.units = [];
+        this.enemyUnits = [];
+        this.enemyCities = [];
+        this.civilizations = [];
+
+        // Технологии
         this.techs = [
-            { id: 'agriculture', name: 'Земледелие', cost: 100, progress: 0, researched: false, bonus: '+2 еды за город' },
-            { id: 'mining', name: 'Горное дело', cost: 150, progress: 0, researched: false, bonus: '+2 золота за город' },
-            { id: 'writing', name: 'Письменность', cost: 200, progress: 0, researched: false, bonus: '+2 науки за город' },
-            { id: 'philosophy', name: 'Философия', cost: 300, progress: 0, researched: false, bonus: '+2 культуры за город' },
-            { id: 'steel', name: 'Сталь', cost: 500, progress: 0, researched: false, bonus: '+50% к силе юнитов' }
+            { id: 'agriculture', name: 'Земледелие', cost: 150, progress: 0, researched: false, bonus: '+2 еды' },
+            { id: 'mining', name: 'Добыча руды', cost: 150, progress: 0, researched: false, bonus: '+2 золота' },
+            { id: 'writing', name: 'Письменность', cost: 200, progress: 0, researched: false, bonus: '+1 наука' },
+            { id: 'bronze', name: 'Бронза', cost: 250, progress: 0, researched: false, bonus: '+2 к атаке' },
+            { id: 'math', name: 'Математика', cost: 300, progress: 0, researched: false, bonus: '+10% науки' }
         ];
-        
-        this.unitTypes = {
-            warrior: { name: 'Воин', cost: 50, attack: 10, defense: 15, speed: 2, symbol: '⚔️', color: '#e74c3c' },
-            archer: { name: 'Лучник', cost: 75, attack: 15, defense: 8, speed: 2.5, symbol: '🏹', color: '#9b59b6' },
-            cavalry: { name: 'Кавалерия', cost: 100, attack: 20, defense: 12, speed: 3.5, symbol: '🐎', color: '#f39c12' }
-        };
-        
+
+        // Цивилизации
+        this.civsData = [
+            { name: 'Рим', flag: '🏛️', color: '#c62828', aggression: 0.7 },
+            { name: 'Галлия', flag: '🛡️', color: '#1976d2', aggression: 0.5 },
+            { name: 'Египет', flag: '👁️', color: '#fbc02d', aggression: 0.6 }
+        ];
+
+        // Состояние игры
+        this.gameRunning = false;
+        this.lastTime = 0;
+        this.particles = [];
+
         this.init();
     }
-    
+
     init() {
-        this.resize();
+        this.resizeCanvas();
+        window.addEventListener('resize', () => this.resizeCanvas());
+        
+        // Генерация карты
         this.generateMap();
-        this.setupEventListeners();
-        this.spawnStarterCity();
-        this.startGameLoop();
-        this.updateUI();
+        
+        // Создание начального города
+        this.createPlayerCity(25, 25);
+        
+        // Создание начального юнита
+        this.createUnit(26, 25, 'warrior', 'player');
+        
+        // Создание вражеских цивилизаций
+        this.createEnemyCivs();
+        
+        // Настройка управления
+        this.setupControls();
+        
+        // Запуск игрового цикла
+        this.gameRunning = true;
+        requestAnimationFrame((t) => this.gameLoop(t));
     }
-    
-    resize() {
+
+    resizeCanvas() {
         const container = document.getElementById('main-view');
         this.canvas.width = container.clientWidth;
         this.canvas.height = container.clientHeight;
         
-        // Center camera on map
+        // Центрирование камеры
         this.cameraX = (this.mapWidth * this.tileSize - this.canvas.width) / 2;
         this.cameraY = (this.mapHeight * this.tileSize - this.canvas.height) / 2;
     }
-    
+
     generateMap() {
         this.map = [];
         for (let y = 0; y < this.mapHeight; y++) {
@@ -90,32 +140,37 @@ class Game {
                 const rand = Math.random();
                 let terrain;
                 
-                if (rand < 0.15) terrain = 'вода';
-                else if (rand < 0.35) terrain = 'лес';
-                else if (rand < 0.50) terrain = 'горы';
-                else if (rand < 0.70) terrain = 'пустыня';
-                else terrain = '平原';
+                if (rand < 0.15) terrain = 'water';
+                else if (rand < 0.25) terrain = 'mountains';
+                else if (rand < 0.40) terrain = 'forest';
+                else if (rand < 0.55) terrain = 'desert';
+                else terrain = 'plains';
                 
                 this.map[y][x] = {
                     terrain: terrain,
-                    resource: Math.random() < 0.1 ? this.getRandomResource() : null,
-                    owner: null
+                    resource: null,
+                    owner: null,
+                    city: null
                 };
+                
+                // Добавление ресурсов
+                if (Math.random() < 0.08 && terrain !== 'water' && terrain !== 'mountains') {
+                    const resRand = Math.random();
+                    if (resRand < 0.4) this.map[y][x].resource = 'wheat';
+                    else if (resRand < 0.6) this.map[y][x].resource = 'gold';
+                    else if (resRand < 0.8) this.map[y][x].resource = 'stone';
+                    else this.map[y][x].resource = 'horse';
+                }
             }
         }
         
-        // Smooth the map
+        // Сглаживание карты
         this.smoothMap();
     }
-    
-    getRandomResource() {
-        const resources = ['пшеница', 'золото', 'камень', 'шелк'];
-        return resources[Math.floor(Math.random() * resources.length)];
-    }
-    
+
     smoothMap() {
-        // Simple smoothing pass
-        for (let pass = 0; pass < 2; pass++) {
+        // Упрощенное сглаживание
+        for (let i = 0; i < 3; i++) {
             const newMap = JSON.parse(JSON.stringify(this.map));
             for (let y = 1; y < this.mapHeight - 1; y++) {
                 for (let x = 1; x < this.mapWidth - 1; x++) {
@@ -130,108 +185,177 @@ class Game {
                     neighbors.forEach(t => counts[t] = (counts[t] || 0) + 1);
                     
                     let maxCount = 0;
-                    let dominant = this.map[y][x].terrain;
-                    for (const [terrain, count] of Object.entries(counts)) {
-                        if (count > maxCount) {
-                            maxCount = count;
-                            dominant = terrain;
+                    let maxTerrain = this.map[y][x].terrain;
+                    for (const t in counts) {
+                        if (counts[t] > maxCount) {
+                            maxCount = counts[t];
+                            maxTerrain = t;
                         }
                     }
                     
                     if (maxCount >= 3) {
-                        newMap[y][x].terrain = dominant;
+                        newMap[y][x].terrain = maxTerrain;
                     }
                 }
             }
             this.map = newMap;
         }
     }
-    
-    spawnStarterCity() {
-        // Find a good spot for starter city
-        let startX = Math.floor(this.mapWidth / 2);
-        let startY = Math.floor(this.mapHeight / 2);
-        
-        // Make sure it's not on water or mountains
-        while (['вода', 'горы'].includes(this.map[startY][startX].terrain)) {
-            startX = Math.floor(Math.random() * this.mapWidth);
-            startY = Math.floor(Math.random() * this.mapHeight);
-        }
-        
-        this.foundCity(startX, startY, 'Столица');
-        
-        // Give starter units
-        this.spawnUnit(startX + 1, startY, 'warrior');
-        this.spawnUnit(startX - 1, startY, 'warrior');
-    }
-    
-    foundCity(x, y, name = null) {
-        if (!name) {
-            const cityNames = ['Новгород', 'Казань', 'Владивосток', 'Самара', 'Омск', 'Уфа', 'Красноярск', 'Пермь', 'Волгоград'];
-            name = cityNames[this.cities.length] || `Город ${this.cities.length + 1}`;
-        }
-        
+
+    createPlayerCity(x, y) {
         const city = {
             x: x,
             y: y,
-            name: name,
-            population: 1,
-            production: 0,
+            name: 'Столица',
+            population: 4,
             health: 100,
             maxHealth: 100,
-            tiles: [{x, y}]
+            production: 0,
+            producing: null,
+            owner: 'player',
+            radius: 3
         };
         
         this.cities.push(city);
+        this.map[y][x].city = city;
         this.map[y][x].owner = 'player';
         
-        // Claim surrounding tiles
-        for (let dy = -1; dy <= 1; dy++) {
-            for (let dx = -1; dx <= 1; dx++) {
+        // Заявка на территорию
+        for (let dy = -city.radius; dy <= city.radius; dy++) {
+            for (let dx = -city.radius; dx <= city.radius; dx++) {
                 const nx = x + dx;
                 const ny = y + dy;
                 if (nx >= 0 && nx < this.mapWidth && ny >= 0 && ny < this.mapHeight) {
-                    this.map[ny][nx].owner = 'player';
-                    if (dx !== 0 || dy !== 0) {
-                        city.tiles.push({x: nx, y: ny});
+                    if (dx*dx + dy*dy <= city.radius * city.radius) {
+                        this.map[ny][nx].owner = 'player';
                     }
                 }
             }
         }
         
-        this.createParticles(x * this.tileSize + this.tileSize/2, y * this.tileSize + this.tileSize/2, '#ffd700', 20);
-        this.showNotification(`Основан город: ${name}!`);
+        this.updateResourceRates();
+        this.showNotification(`Основан город: ${city.name}`);
     }
-    
-    spawnUnit(x, y, type) {
-        const unitData = this.unitTypes[type];
-        const unit = {
-            id: Date.now() + Math.random(),
-            x: x * this.tileSize + this.tileSize / 2,
-            y: y * this.tileSize + this.tileSize / 2,
-            targetX: x * this.tileSize + this.tileSize / 2,
-            targetY: y * this.tileSize + this.tileSize / 2,
-            type: type,
-            ...unitData,
+
+    createEnemyCity(x, y, civ) {
+        const city = {
+            x: x,
+            y: y,
+            name: `${civ.name} City`,
+            population: 3,
             health: 100,
             maxHealth: 100,
-            exp: 0,
-            level: 1
+            production: 0,
+            producing: null,
+            owner: civ.name,
+            radius: 3
         };
         
-        this.units.push(unit);
+        this.enemyCities.push(city);
+        this.map[y][x].city = city;
+        this.map[y][x].owner = civ.name;
+        
+        // Заявка на территорию
+        for (let dy = -city.radius; dy <= city.radius; dy++) {
+            for (let dx = -city.radius; dx <= city.radius; dx++) {
+                const nx = x + dx;
+                const ny = y + dy;
+                if (nx >= 0 && nx < this.mapWidth && ny >= 0 && ny < this.mapHeight) {
+                    if (dx*dx + dy*dy <= city.radius * city.radius) {
+                        this.map[ny][nx].owner = civ.name;
+                    }
+                }
+            }
+        }
+    }
+
+    createUnit(x, y, type, owner, targetX = null, targetY = null) {
+        const unitStats = {
+            warrior: { hp: 100, attack: 15, defense: 8, speed: 0.03, symbol: '⚔️' },
+            archer: { hp: 80, attack: 20, defense: 5, speed: 0.035, symbol: '🏹' },
+            cavalry: { hp: 120, attack: 18, defense: 6, speed: 0.05, symbol: '🐴' },
+            settler: { hp: 50, attack: 0, defense: 2, speed: 0.02, symbol: '🏗️' }
+        };
+        
+        const stats = unitStats[type];
+        const unit = {
+            x: x,
+            y: y,
+            pixelX: x * this.tileSize,
+            pixelY: y * this.tileSize,
+            type: type,
+            owner: owner,
+            hp: stats.hp,
+            maxHp: stats.hp,
+            attack: stats.attack,
+            defense: stats.defense,
+            speed: stats.speed,
+            symbol: stats.symbol,
+            targetX: targetX,
+            targetY: targetY,
+            moving: targetX !== null,
+            state: 'idle',
+            attackTarget: null
+        };
+        
+        if (owner === 'player') {
+            this.units.push(unit);
+        } else {
+            this.enemyUnits.push(unit);
+        }
+        
         return unit;
     }
-    
-    setupEventListeners() {
-        window.addEventListener('resize', () => this.resize());
+
+    createEnemyCivs() {
+        const positions = [
+            { x: 10, y: 10 },
+            { x: 50, y: 10 },
+            { x: 30, y: 50 }
+        ];
         
-        this.canvas.addEventListener('mousedown', (e) => {
-            this.isDragging = true;
-            this.lastMouseX = e.clientX;
-            this.lastMouseY = e.clientY;
+        this.civsData.forEach((civ, index) => {
+            const pos = positions[index];
+            
+            // Проверка дистанции от игрока
+            const distToPlayer = Math.sqrt(Math.pow(pos.x - 25, 2) + Math.pow(pos.y - 25, 2));
+            if (distToPlayer < 15) {
+                pos.x += 15;
+                pos.y += 15;
+            }
+            
+            this.civilizations.push({
+                ...civ,
+                cities: [],
+                units: [],
+                techs: [],
+                relation: 0
+            });
+            
+            this.createEnemyCity(pos.x, pos.y, civ);
+            this.civilizations[index].cities.push(this.enemyCities[this.enemyCities.length - 1]);
+            
+            // Создание начальных юнитов
+            this.createUnit(pos.x + 1, pos.y, 'warrior', civ.name);
+            this.createUnit(pos.x - 1, pos.y, 'archer', civ.name);
         });
         
+        this.updateCivsList();
+    }
+
+    setupControls() {
+        // Перетаскивание камеры
+        this.canvas.addEventListener('mousedown', (e) => {
+            if (e.button === 0) { // ЛКМ
+                this.isDragging = true;
+                this.lastMouseX = e.clientX;
+                this.lastMouseY = e.clientY;
+            } else if (e.button === 2) { // ПКМ
+                e.preventDefault();
+                this.handleRightClick(e);
+            }
+        });
+
         this.canvas.addEventListener('mousemove', (e) => {
             if (this.isDragging) {
                 const dx = e.clientX - this.lastMouseX;
@@ -240,556 +364,757 @@ class Game {
                 this.cameraY -= dy;
                 this.lastMouseX = e.clientX;
                 this.lastMouseY = e.clientY;
+                
+                // Ограничение камеры
+                this.cameraX = Math.max(0, Math.min(this.cameraX, this.mapWidth * this.tileSize - this.canvas.width));
+                this.cameraY = Math.max(0, Math.min(this.cameraY, this.mapHeight * this.tileSize - this.canvas.height));
             }
             
-            // Calculate hovered tile
+            // Вычисление hovered tile
             const rect = this.canvas.getBoundingClientRect();
-            const mouseX = e.clientX - rect.left;
-            const mouseY = e.clientY - rect.top;
-            const tileX = Math.floor((mouseX + this.cameraX) / this.tileSize);
-            const tileY = Math.floor((mouseY + this.cameraY) / this.tileSize);
+            const mouseX = e.clientX - rect.left + this.cameraX;
+            const mouseY = e.clientY - rect.top + this.cameraY;
+            const tileX = Math.floor(mouseX / this.tileSize);
+            const tileY = Math.floor(mouseY / this.tileSize);
             
             if (tileX >= 0 && tileX < this.mapWidth && tileY >= 0 && tileY < this.mapHeight) {
                 this.hoveredTile = { x: tileX, y: tileY };
-                this.updateTooltip(e.clientX, e.clientY);
             } else {
                 this.hoveredTile = null;
-                document.getElementById('tooltip').style.display = 'none';
             }
         });
-        
+
         this.canvas.addEventListener('mouseup', () => {
             this.isDragging = false;
         });
-        
+
         this.canvas.addEventListener('mouseleave', () => {
             this.isDragging = false;
         });
-        
+
+        // Отключение контекстного меню
+        this.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
+        // Клик для выбора юнита
         this.canvas.addEventListener('click', (e) => {
-            if (!this.isDragging && this.hoveredTile) {
-                this.handleTileClick(this.hoveredTile.x, this.hoveredTile.y);
+            if (!this.isDragging) {
+                const rect = this.canvas.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left + this.cameraX;
+                const mouseY = e.clientY - rect.top + this.cameraY;
+                const tileX = Math.floor(mouseX / this.tileSize);
+                const tileY = Math.floor(mouseY / this.tileSize);
+                
+                // Поиск юнита в клетке
+                const clickedUnit = this.units.find(u => 
+                    Math.round(u.x) === tileX && Math.round(u.y) === tileY
+                );
+                
+                if (clickedUnit) {
+                    this.selectUnit(clickedUnit);
+                } else {
+                    this.deselectUnit();
+                }
             }
-        });
-        
-        // Button listeners
-        document.getElementById('found-city-btn').addEventListener('click', () => {
-            if (this.resources.gold >= 100 && this.selectedUnit) {
-                const tileX = Math.floor(this.selectedUnit.x / this.tileSize);
-                const tileY = Math.floor(this.selectedUnit.y / this.tileSize);
-                this.resources.gold -= 100;
-                this.foundCity(tileX, tileY);
-                // Remove the unit
-                this.units = this.units.filter(u => u.id !== this.selectedUnit.id);
-                this.selectedUnit = null;
-                this.updateUI();
-            }
-        });
-        
-        document.getElementById('train-warrior-btn').addEventListener('click', () => {
-            this.trainUnit('warrior');
-        });
-        
-        document.getElementById('train-archer-btn').addEventListener('click', () => {
-            this.trainUnit('archer');
-        });
-        
-        document.getElementById('train-cavalry-btn').addEventListener('click', () => {
-            this.trainUnit('cavalry');
         });
     }
-    
-    handleTileClick(x, y) {
-        const screenX = x * this.tileSize - this.cameraX;
-        const screenY = y * this.tileSize - this.cameraY;
+
+    handleRightClick(e) {
+        if (!this.selectedUnit) return;
         
-        // Check if clicked on a unit
-        for (const unit of this.units) {
-            const unitScreenX = unit.x - this.cameraX;
-            const unitScreenY = unit.y - this.cameraY;
-            const dist = Math.sqrt((screenX - unitScreenX) ** 2 + (screenY - unitScreenY) ** 2);
+        const rect = this.canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left + this.cameraX;
+        const mouseY = e.clientY - rect.top + this.cameraY;
+        const tileX = Math.floor(mouseX / this.tileSize);
+        const tileY = Math.floor(mouseY / this.tileSize);
+        
+        if (tileX < 0 || tileX >= this.mapWidth || tileY < 0 || tileY >= this.mapHeight) return;
+        
+        const terrain = this.map[tileY][tileX].terrain;
+        if (this.terrainTypes[terrain].impassable) {
+            this.showNotification('Нельзя пройти через эту местность!');
+            return;
+        }
+        
+        // Проверка на вражеский юнит
+        const enemyUnit = this.enemyUnits.find(u => 
+            Math.round(u.x) === tileX && Math.round(u.y) === tileY
+        );
+        
+        if (enemyUnit) {
+            // Атака
+            this.selectedUnit.attackTarget = enemyUnit;
+            this.selectedUnit.targetX = tileX;
+            this.selectedUnit.targetY = tileY;
+            this.selectedUnit.moving = true;
+            this.selectedUnit.state = 'attacking';
+            this.showNotification('Атака!');
+        } else {
+            // Движение
+            this.selectedUnit.targetX = tileX;
+            this.selectedUnit.targetY = tileY;
+            this.selectedUnit.moving = true;
+            this.selectedUnit.state = 'moving';
+            this.selectedUnit.attackTarget = null;
+        }
+    }
+
+    selectUnit(unit) {
+        this.selectedUnit = unit;
+        document.getElementById('unit-info').classList.add('active');
+        this.updateUnitInfo();
+    }
+
+    deselectUnit() {
+        this.selectedUnit = null;
+        document.getElementById('unit-info').classList.remove('active');
+    }
+
+    updateUnitInfo() {
+        if (!this.selectedUnit) return;
+        
+        const unit = this.selectedUnit;
+        document.getElementById('unit-name').textContent = 
+            `${unit.symbol} ${unit.type.charAt(0).toUpperCase() + unit.type.slice(1)}`;
+        document.getElementById('unit-hp').textContent = `${Math.round(unit.hp)}/${unit.maxHp}`;
+        document.getElementById('unit-atk').textContent = unit.attack;
+        document.getElementById('unit-def').textContent = unit.defense;
+    }
+
+    updateResourceRates() {
+        let food = 2, gold = 1, science = 0, culture = 0;
+        
+        this.cities.forEach(city => {
+            food += city.population;
+            gold += Math.floor(city.population / 2);
             
-            if (dist < this.tileSize / 2) {
-                this.selectedUnit = unit;
-                this.createParticles(unit.x, unit.y, '#4a9eff', 10);
-                break;
+            // Бонусы от ресурсов
+            for (let dy = -city.radius; dy <= city.radius; dy++) {
+                for (let dx = -city.radius; dx <= city.radius; dx++) {
+                    const nx = city.x + dx;
+                    const ny = city.y + dy;
+                    if (nx >= 0 && nx < this.mapWidth && ny >= 0 && ny < this.mapHeight) {
+                        const tile = this.map[ny][nx];
+                        if (tile.owner === 'player' && tile.resource) {
+                            if (tile.resource === 'wheat') food += 2;
+                            if (tile.resource === 'gold') gold += 2;
+                            if (tile.resource === 'stone') science += 1;
+                            if (tile.resource === 'horse') culture += 1;
+                        }
+                    }
+                }
             }
-        }
+        });
+        
+        // Бонусы от технологий
+        if (this.techs.find(t => t.id === 'agriculture' && t.researched)) food += 2;
+        if (this.techs.find(t => t.id === 'mining' && t.researched)) gold += 2;
+        if (this.techs.find(t => t.id === 'writing' && t.researched)) science += 1;
+        
+        this.resourceRates = { food, gold, science, culture };
     }
-    
-    trainUnit(type) {
-        const unitData = this.unitTypes[type];
-        if (this.resources.gold >= unitData.cost && this.cities.length > 0) {
-            this.resources.gold -= unitData.cost;
-            const city = this.cities[0];
-            this.spawnUnit(city.x + 1, city.y, type);
-            this.createParticles(
-                (city.x + 1) * this.tileSize + this.tileSize/2,
-                city.y * this.tileSize + this.tileSize/2,
-                unitData.color,
-                15
-            );
-            this.updateUI();
-        }
+
+    gameLoop(timestamp) {
+        if (!this.gameRunning) return;
+        
+        const deltaTime = timestamp - this.lastTime;
+        this.lastTime = timestamp;
+        
+        this.update(deltaTime);
+        this.render();
+        this.renderMinimap();
+        this.updateUI();
+        
+        requestAnimationFrame((t) => this.gameLoop(t));
     }
-    
-    createParticles(x, y, color, count) {
-        for (let i = 0; i < count; i++) {
-            this.particles.push({
-                x: x,
-                y: y,
-                vx: (Math.random() - 0.5) * 4,
-                vy: (Math.random() - 0.5) * 4,
-                life: 1,
-                color: color,
-                size: Math.random() * 4 + 2
+
+    update(deltaTime) {
+        // Обновление ресурсов
+        if (deltaTime > 0) {
+            this.resources.food += this.resourceRates.food * (deltaTime / 1000);
+            this.resources.gold += this.resourceRates.gold * (deltaTime / 1000);
+            this.resources.science += this.resourceRates.science * (deltaTime / 1000);
+            this.resources.culture += this.resourceRates.culture * (deltaTime / 1000);
+            
+            // Исследование технологий
+            this.techs.forEach(tech => {
+                if (!tech.researched && this.resources.science > 0) {
+                    tech.progress += this.resourceRates.science * (deltaTime / 1000);
+                    if (tech.progress >= tech.cost) {
+                        tech.researched = true;
+                        this.showNotification(`Исследовано: ${tech.name}!`);
+                        this.updateResourceRates();
+                    }
+                }
             });
         }
+        
+        // Обновление юнитов
+        this.updateUnits(deltaTime);
+        this.updateEnemyUnits(deltaTime);
+        
+        // Обновление городов
+        this.updateCities(deltaTime);
+        this.updateEnemyCities(deltaTime);
+        
+        // Обновление частиц
+        this.updateParticles(deltaTime);
+        
+        // ИИ цивилизаций
+        this.updateAI(deltaTime);
     }
-    
-    updateParticles(dt) {
+
+    updateUnits(deltaTime) {
+        this.units.forEach(unit => {
+            if (unit.moving && unit.targetX !== null) {
+                const dx = unit.targetX - unit.x;
+                const dy = unit.targetY - unit.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                
+                if (dist < 0.1) {
+                    unit.x = unit.targetX;
+                    unit.y = unit.targetY;
+                    unit.pixelX = unit.x * this.tileSize;
+                    unit.pixelY = unit.y * this.tileSize;
+                    unit.moving = false;
+                    unit.state = 'idle';
+                    
+                    // Если это была атака
+                    if (unit.attackTarget) {
+                        this.resolveCombat(unit, unit.attackTarget);
+                        unit.attackTarget = null;
+                    }
+                } else {
+                    const moveSpeed = unit.speed * (deltaTime / 16);
+                    unit.x += (dx / dist) * moveSpeed;
+                    unit.y += (dy / dist) * moveSpeed;
+                    unit.pixelX = unit.x * this.tileSize;
+                    unit.pixelY = unit.y * this.tileSize;
+                }
+            }
+        });
+    }
+
+    updateEnemyUnits(deltaTime) {
+        this.enemyUnits.forEach(unit => {
+            if (unit.moving && unit.targetX !== null) {
+                const dx = unit.targetX - unit.x;
+                const dy = unit.targetY - unit.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                
+                if (dist < 0.1) {
+                    unit.x = unit.targetX;
+                    unit.y = unit.targetY;
+                    unit.pixelX = unit.x * this.tileSize;
+                    unit.pixelY = unit.y * this.tileSize;
+                    unit.moving = false;
+                    unit.state = 'idle';
+                    
+                    if (unit.attackTarget) {
+                        this.resolveCombat(unit, unit.attackTarget);
+                        unit.attackTarget = null;
+                    }
+                } else {
+                    const moveSpeed = unit.speed * (deltaTime / 16);
+                    unit.x += (dx / dist) * moveSpeed;
+                    unit.y += (dy / dist) * moveSpeed;
+                    unit.pixelX = unit.x * this.tileSize;
+                    unit.pixelY = unit.y * this.tileSize;
+                }
+            }
+        });
+    }
+
+    resolveCombat(attacker, defender) {
+        const damage = Math.max(1, attacker.attack - defender.defense / 2);
+        defender.hp -= damage;
+        
+        // Эффект удара
+        this.createParticle(defender.x * this.tileSize, defender.y * this.tileSize, '💥');
+        
+        if (defender.hp <= 0) {
+            this.showNotification(`${attacker.type} уничтожил ${defender.type}!`);
+            
+            // Удаление юнита
+            if (defender.owner === 'player') {
+                const idx = this.units.indexOf(defender);
+                if (idx > -1) this.units.splice(idx, 1);
+                if (this.selectedUnit === defender) this.deselectUnit();
+            } else {
+                const idx = this.enemyUnits.indexOf(defender);
+                if (idx > -1) this.enemyUnits.splice(idx, 1);
+            }
+        }
+    }
+
+    updateCities(deltaTime) {
+        this.cities.forEach(city => {
+            // Рост населения
+            if (this.resources.food >= city.population * 20) {
+                this.resources.food -= city.population * 20;
+                city.population++;
+                this.updateResourceRates();
+            }
+            
+            // Производство
+            if (city.producing) {
+                city.production += 2 * (deltaTime / 1000);
+                
+                const costs = { warrior: 50, archer: 80, cavalry: 120 };
+                if (city.production >= costs[city.producing]) {
+                    this.createUnit(city.x + 1, city.y, city.producing, 'player');
+                    city.production = 0;
+                    city.producing = null;
+                    this.showNotification(`Юнит создан: ${city.producing}`);
+                }
+            }
+        });
+    }
+
+    updateEnemyCities(deltaTime) {
+        this.enemyCities.forEach(city => {
+            if (this.resources.food >= city.population * 20) {
+                city.population++;
+            }
+            
+            if (city.producing) {
+                city.production += 2 * (deltaTime / 1000);
+                
+                const costs = { warrior: 50, archer: 80, cavalry: 120 };
+                if (city.production >= costs[city.producing]) {
+                    this.createUnit(city.x + 1, city.y, city.producing, city.owner);
+                    city.production = 0;
+                    city.producing = null;
+                }
+            }
+        });
+    }
+
+    updateAI(deltaTime) {
+        // Простой ИИ для каждой цивилизации
+        this.civilizations.forEach((civ, civIndex) => {
+            const civUnits = this.enemyUnits.filter(u => u.owner === civ.name);
+            const civCities = this.enemyCities.filter(c => c.owner === civ.name);
+            
+            // Производство юнитов
+            civCities.forEach(city => {
+                if (!city.producing && Math.random() < 0.01) {
+                    const unitTypes = ['warrior', 'warrior', 'archer', 'cavalry'];
+                    city.producing = unitTypes[Math.floor(Math.random() * unitTypes.length)];
+                }
+            });
+            
+            // Движение юнитов
+            civUnits.forEach(unit => {
+                if (!unit.moving && Math.random() < 0.02) {
+                    // Поиск цели
+                    const playerUnits = this.units.filter(u => !u.moving);
+                    const playerCities = this.cities;
+                    
+                    let targetX, targetY;
+                    
+                    if (playerUnits.length > 0 && Math.random() < civ.aggression) {
+                        // Атака ближайшего юнита
+                        const nearest = playerUnits.reduce((nearest, u) => {
+                            const dist = Math.sqrt(Math.pow(u.x - unit.x, 2) + Math.pow(u.y - unit.y, 2));
+                            return dist < nearest.dist ? { unit: u, dist } : nearest;
+                        }, { unit: null, dist: Infinity });
+                        
+                        if (nearest.unit && nearest.dist < 20) {
+                            targetX = nearest.unit.x;
+                            targetY = nearest.unit.y;
+                            unit.attackTarget = nearest.unit;
+                        }
+                    }
+                    
+                    if (!targetX && playerCities.length > 0 && Math.random() < civ.aggression * 0.5) {
+                        // Атака города
+                        const nearest = playerCities.reduce((nearest, c) => {
+                            const dist = Math.sqrt(Math.pow(c.x - unit.x, 2) + Math.pow(c.y - unit.y, 2));
+                            return dist < nearest.dist ? { city: c, dist } : nearest;
+                        }, { city: null, dist: Infinity });
+                        
+                        if (nearest.city && nearest.dist < 25) {
+                            targetX = nearest.city.x;
+                            targetY = nearest.city.y;
+                        }
+                    }
+                    
+                    if (!targetX) {
+                        // Случайное движение
+                        targetX = Math.max(0, Math.min(this.mapWidth - 1, unit.x + (Math.random() - 0.5) * 10));
+                        targetY = Math.max(0, Math.min(this.mapHeight - 1, unit.y + (Math.random() - 0.5) * 10));
+                    }
+                    
+                    const terrain = this.map[Math.floor(targetY)][Math.floor(targetX)].terrain;
+                    if (!this.terrainTypes[terrain].impassable) {
+                        unit.targetX = targetX;
+                        unit.targetY = targetY;
+                        unit.moving = true;
+                    }
+                }
+            });
+        });
+    }
+
+    createParticle(x, y, symbol) {
+        this.particles.push({
+            x: x,
+            y: y,
+            symbol: symbol,
+            life: 1.0,
+            vy: -2
+        });
+    }
+
+    updateParticles(deltaTime) {
         for (let i = this.particles.length - 1; i >= 0; i--) {
             const p = this.particles[i];
-            p.x += p.vx;
-            p.y += p.vy;
-            p.vy += 0.1; // gravity
-            p.life -= dt * 2;
+            p.life -= deltaTime / 1000;
+            p.y += p.vy * (deltaTime / 16);
             
             if (p.life <= 0) {
                 this.particles.splice(i, 1);
             }
         }
     }
-    
-    updateUnits(dt) {
-        for (const unit of this.units) {
-            // Move towards target
-            const dx = unit.targetX - unit.x;
-            const dy = unit.targetY - unit.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            
-            if (dist > 1) {
-                const speed = unit.speed * this.tileSize * dt;
-                unit.x += (dx / dist) * speed;
-                unit.y += (dy / dist) * speed;
-            }
-            
-            // Random wandering for unselected units
-            if (unit !== this.selectedUnit && Math.random() < 0.01) {
-                const angle = Math.random() * Math.PI * 2;
-                const wanderDist = this.tileSize * (1 + Math.random() * 2);
-                unit.targetX = unit.x + Math.cos(angle) * wanderDist;
-                unit.targetY = unit.y + Math.sin(angle) * wanderDist;
+
+    render() {
+        const ctx = this.ctx;
+        
+        // Очистка
+        ctx.fillStyle = '#1a1a2e';
+        ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        // Рендеринг карты
+        const startX = Math.floor(this.cameraX / this.tileSize);
+        const startY = Math.floor(this.cameraY / this.tileSize);
+        const endX = Math.min(this.mapWidth, startX + Math.ceil(this.canvas.width / this.tileSize) + 1);
+        const endY = Math.min(this.mapHeight, startY + Math.ceil(this.canvas.height / this.tileSize) + 1);
+        
+        for (let y = startY; y < endY; y++) {
+            for (let x = startX; x < endX; x++) {
+                const tile = this.map[y][x];
+                const screenX = x * this.tileSize - this.cameraX;
+                const screenY = y * this.tileSize - this.cameraY;
                 
-                // Keep in bounds
-                unit.targetX = Math.max(this.tileSize/2, Math.min((this.mapWidth - 0.5) * this.tileSize, unit.targetX));
-                unit.targetY = Math.max(this.tileSize/2, Math.min((this.mapHeight - 0.5) * this.tileSize, unit.targetY));
-            }
-        }
-    }
-    
-    updateResources(dt) {
-        // Calculate resource rates from cities
-        let foodRate = 0, goldRate = 0, scienceRate = 0, cultureRate = 0;
-        
-        for (const city of this.cities) {
-            foodRate += 2 + city.population;
-            goldRate += 2;
-            scienceRate += 1;
-            cultureRate += 1;
-        }
-        
-        // Apply tech bonuses
-        if (this.techs[0].researched) foodRate += this.cities.length * 2;
-        if (this.techs[1].researched) goldRate += this.cities.length * 2;
-        if (this.techs[2].researched) scienceRate += this.cities.length * 2;
-        if (this.techs[3].researched) cultureRate += this.cities.length * 2;
-        
-        this.resourceRates = { food: foodRate, gold: goldRate, science: scienceRate, culture: cultureRate };
-        
-        // Add resources
-        this.resources.food += foodRate * dt;
-        this.resources.gold += goldRate * dt;
-        this.resources.science += scienceRate * dt;
-        this.resources.culture += cultureRate * dt;
-        
-        // Update tech progress
-        for (const tech of this.techs) {
-            if (!tech.researched) {
-                tech.progress += scienceRate * dt;
-                if (tech.progress >= tech.cost) {
-                    tech.progress = tech.cost;
-                    tech.researched = true;
-                    this.showNotification(`Исследовано: ${tech.name}!`);
-                    this.createParticles(
-                        this.canvas.width / 2,
-                        this.canvas.height / 2,
-                        '#4a9eff',
-                        30
-                    );
+                // Базовый цвет местности
+                const terrain = this.terrainTypes[tile.terrain];
+                const gradient = ctx.createLinearGradient(screenX, screenY, screenX + this.tileSize, screenY + this.tileSize);
+                gradient.addColorStop(0, terrain.color);
+                gradient.addColorStop(1, terrain.color2);
+                ctx.fillStyle = gradient;
+                ctx.fillRect(screenX, screenY, this.tileSize, this.tileSize);
+                
+                // Границы
+                ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(screenX, screenY, this.tileSize, this.tileSize);
+                
+                // Владелец
+                if (tile.owner === 'player') {
+                    ctx.fillStyle = 'rgba(74, 158, 255, 0.2)';
+                    ctx.fillRect(screenX, screenY, this.tileSize, this.tileSize);
+                }
+                
+                // Ресурсы
+                if (tile.resource) {
+                    ctx.font = '20px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    const resSymbol = this.assets.resources[tile.resource];
+                    ctx.fillText(resSymbol, screenX + this.tileSize / 2, screenY + this.tileSize / 2);
+                }
+                
+                // Город
+                if (tile.city) {
+                    ctx.font = '32px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+                    ctx.shadowBlur = 10;
+                    ctx.fillText(this.assets.city, screenX + this.tileSize / 2, screenY + this.tileSize / 2);
+                    ctx.shadowBlur = 0;
+                    
+                    // Полоска здоровья города
+                    const hpPercent = tile.city.health / tile.city.maxHealth;
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                    ctx.fillRect(screenX + 4, screenY + this.tileSize - 8, this.tileSize - 8, 4);
+                    ctx.fillStyle = hpPercent > 0.5 ? '#4caf50' : '#f44336';
+                    ctx.fillRect(screenX + 4, screenY + this.tileSize - 8, (this.tileSize - 8) * hpPercent, 4);
+                }
+                
+                // Hover эффект
+                if (this.hoveredTile && this.hoveredTile.x === x && this.hoveredTile.y === y) {
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(screenX + 2, screenY + 2, this.tileSize - 4, this.tileSize - 4);
                 }
             }
         }
-    }
-    
-    showNotification(message) {
-        const notification = document.createElement('div');
-        notification.className = 'notification';
-        notification.textContent = message;
-        document.getElementById('main-view').appendChild(notification);
         
-        setTimeout(() => {
-            notification.remove();
-        }, 3000);
-    }
-    
-    updateTooltip(mouseX, mouseY) {
-        const tooltip = document.getElementById('tooltip');
+        // Рендеринг юнитов
+        [...this.units, ...this.enemyUnits].forEach(unit => {
+            const screenX = unit.pixelX - this.cameraX;
+            const screenY = unit.pixelY - this.cameraY;
+            
+            // Тень
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.beginPath();
+            ctx.ellipse(screenX + this.tileSize / 2, screenY + this.tileSize - 8, 12, 6, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Юнит
+            ctx.font = '32px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+            ctx.shadowBlur = 8;
+            
+            // Подсветка выбранного юнита
+            if (unit === this.selectedUnit) {
+                ctx.shadowColor = '#4a9eff';
+                ctx.shadowBlur = 20;
+                
+                // Кольцо выделения
+                ctx.strokeStyle = '#4a9eff';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(screenX + this.tileSize / 2, screenY + this.tileSize / 2, this.tileSize / 2 - 4, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+            
+            ctx.fillText(unit.symbol, screenX + this.tileSize / 2, screenY + this.tileSize / 2);
+            ctx.shadowBlur = 0;
+            
+            // Полоска здоровья
+            const hpPercent = unit.hp / unit.maxHp;
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.fillRect(screenX + 4, screenY - 4, this.tileSize - 8, 4);
+            ctx.fillStyle = hpPercent > 0.5 ? '#4caf50' : hpPercent > 0.25 ? '#ff9800' : '#f44336';
+            ctx.fillRect(screenX + 4, screenY - 4, (this.tileSize - 8) * hpPercent, 4);
+            
+            // Индикатор движения
+            if (unit.moving) {
+                ctx.fillStyle = '#4a9eff';
+                ctx.beginPath();
+                ctx.arc(screenX + this.tileSize / 2, screenY + this.tileSize / 2, 4, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        });
         
-        if (this.hoveredTile) {
-            const tile = this.map[this.hoveredTile.y][this.hoveredTile.x];
-            const terrain = this.terrainTypes[tile.terrain];
+        // Рендеринг частиц
+        this.particles.forEach(p => {
+            const screenX = p.x - this.cameraX;
+            const screenY = p.y - this.cameraY;
             
-            let content = `<strong>${terrain.name}</strong>`;
-            
-            if (tile.resource) {
-                content += `<br>📦 Ресурс: ${tile.resource}`;
+            ctx.globalAlpha = p.life;
+            ctx.font = '24px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(p.symbol, screenX, screenY);
+            ctx.globalAlpha = 1;
+        });
+    }
+
+    renderMinimap() {
+        const ctx = this.minimapCtx;
+        const scale = 200 / Math.max(this.mapWidth, this.mapHeight);
+        
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, 200, 200);
+        
+        // Рендеринг местности
+        for (let y = 0; y < this.mapHeight; y++) {
+            for (let x = 0; x < this.mapWidth; x++) {
+                const terrain = this.terrainTypes[this.map[y][x].terrain];
+                ctx.fillStyle = terrain.color;
+                ctx.fillRect(x * scale, y * scale, scale, scale);
             }
-            
-            if (tile.owner) {
-                content += `<br>🏛️ Владелец: Вы`;
-            }
-            
-            // Check for units
-            for (const unit of this.units) {
-                const unitTileX = Math.floor(unit.x / this.tileSize);
-                const unitTileY = Math.floor(unit.y / this.tileSize);
-                if (unitTileX === this.hoveredTile.x && unitTileY === this.hoveredTile.y) {
-                    content += `<br>⚔️ ${unit.name} (HP: ${Math.round(unit.health)})`;
-                }
-            }
-            
-            // Check for cities
-            for (const city of this.cities) {
-                if (city.x === this.hoveredTile.x && city.y === this.hoveredTile.y) {
-                    content += `<br>🏙️ ${city.name} (Население: ${city.population})`;
-                }
-            }
-            
-            tooltip.innerHTML = content;
-            tooltip.style.display = 'block';
-            tooltip.style.left = (mouseX + 15) + 'px';
-            tooltip.style.top = (mouseY + 15) + 'px';
         }
+        
+        // Города
+        [...this.cities, ...this.enemyCities].forEach(city => {
+            ctx.fillStyle = city.owner === 'player' ? '#4a9eff' : '#f44336';
+            ctx.fillRect(city.x * scale - 2, city.y * scale - 2, 6, 6);
+        });
+        
+        // Юниты
+        this.units.forEach(unit => {
+            ctx.fillStyle = '#4a9eff';
+            ctx.beginPath();
+            ctx.arc(unit.x * scale, unit.y * scale, 2, 0, Math.PI * 2);
+            ctx.fill();
+        });
+        
+        this.enemyUnits.forEach(unit => {
+            ctx.fillStyle = '#f44336';
+            ctx.beginPath();
+            ctx.arc(unit.x * scale, unit.y * scale, 2, 0, Math.PI * 2);
+            ctx.fill();
+        });
+        
+        // Камера
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(
+            this.cameraX * scale / this.tileSize,
+            this.cameraY * scale / this.tileSize,
+            this.canvas.width * scale / this.tileSize,
+            this.canvas.height * scale / this.tileSize
+        );
     }
-    
+
     updateUI() {
+        // Ресурсы
         document.getElementById('food').textContent = Math.floor(this.resources.food);
         document.getElementById('gold').textContent = Math.floor(this.resources.gold);
         document.getElementById('science').textContent = Math.floor(this.resources.science);
         document.getElementById('culture').textContent = Math.floor(this.resources.culture);
         
-        // Update tech list
-        const techList = document.getElementById('tech-list');
-        techList.innerHTML = '';
-        for (const tech of this.techs) {
-            const progress = tech.researched ? 100 : (tech.progress / tech.cost * 100);
-            const techItem = document.createElement('div');
-            techItem.className = 'tech-item';
-            techItem.innerHTML = `
-                <div class="tech-name">${tech.researched ? '✅' : '🔬'} ${tech.name}</div>
-                <div class="unit-stats">${tech.bonus}</div>
-                <div class="tech-progress">
-                    <div class="tech-progress-bar" style="width: ${progress}%"></div>
+        // Города
+        const citiesList = document.getElementById('cities-list');
+        citiesList.innerHTML = '';
+        this.cities.forEach(city => {
+            const div = document.createElement('div');
+            div.className = 'civ-item';
+            div.innerHTML = `
+                <span class="civ-flag">🏰</span>
+                <div class="civ-info">
+                    <div class="civ-name">${city.name}</div>
+                    <div class="civ-status">Население: ${city.population}</div>
                 </div>
             `;
-            techList.appendChild(techItem);
-        }
+            citiesList.appendChild(div);
+        });
         
-        // Update city list
-        const cityList = document.getElementById('city-list');
-        cityList.innerHTML = '';
-        for (const city of this.cities) {
-            const cityItem = document.createElement('div');
-            cityItem.className = 'city-item';
-            cityItem.innerHTML = `
-                <div class="city-name">🏙️ ${city.name}</div>
-                <div class="city-stats">Население: ${city.population} | HP: ${city.health}</div>
+        // Технологии
+        const techList = document.getElementById('tech-list');
+        techList.innerHTML = '';
+        this.techs.forEach(tech => {
+            const div = document.createElement('div');
+            div.style.marginBottom = '8px';
+            
+            const percent = tech.researched ? 100 : Math.min(100, (tech.progress / tech.cost) * 100);
+            
+            div.innerHTML = `
+                <div style="display: flex; justify-content: space-between; font-size: 12px;">
+                    <span>${tech.name} ${tech.researched ? '✅' : ''}</span>
+                    <span>${tech.researched ? 'Изучено' : Math.floor(percent) + '%'}</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: ${percent}%"></div>
+                </div>
             `;
-            cityList.appendChild(cityItem);
-        }
+            techList.appendChild(div);
+        });
         
-        // Update unit list
-        const unitList = document.getElementById('unit-list');
-        unitList.innerHTML = '';
-        for (const unit of this.units) {
-            const unitItem = document.createElement('div');
-            unitItem.className = 'unit-item';
-            unitItem.style.borderLeftColor = unit === this.selectedUnit ? '#ffd700' : '#4a9eff';
-            unitItem.innerHTML = `
-                <div class="unit-name">${unit.symbol} ${unit.name} (Ур. ${unit.level})</div>
-                <div class="unit-stats">ATK: ${unit.attack} | DEF: ${unit.defense} | HP: ${Math.round(unit.health)}</div>
+        // Кнопки
+        document.getElementById('btn-found-city').disabled = this.resources.gold < 100;
+        document.getElementById('btn-train-warrior').disabled = this.resources.gold < 50 || this.resources.food < 10;
+        document.getElementById('btn-train-archer').disabled = this.resources.gold < 80 || this.resources.food < 15;
+        document.getElementById('btn-train-cavalry').disabled = this.resources.gold < 120 || this.resources.food < 20;
+        
+        // Информация о юните
+        if (this.selectedUnit) {
+            this.updateUnitInfo();
+        }
+    }
+
+    updateCivsList() {
+        const civsList = document.getElementById('civs-list');
+        civsList.innerHTML = '';
+        
+        this.civilizations.forEach(civ => {
+            const div = document.createElement('div');
+            div.className = 'civ-item';
+            div.innerHTML = `
+                <span class="civ-flag">${civ.flag}</span>
+                <div class="civ-info">
+                    <div class="civ-name">${civ.name}</div>
+                    <div class="civ-status hostile">⚔️ Враг</div>
+                </div>
             `;
-            unitList.appendChild(unitItem);
-        }
+            civsList.appendChild(div);
+        });
         
-        // Update button states
-        document.getElementById('found-city-btn').disabled = this.resources.gold < 100 || !this.selectedUnit;
-        document.getElementById('train-warrior-btn').disabled = this.resources.gold < 50 || this.cities.length === 0;
-        document.getElementById('train-archer-btn').disabled = this.resources.gold < 75 || this.cities.length === 0;
-        document.getElementById('train-cavalry-btn').disabled = this.resources.gold < 100 || this.cities.length === 0;
+        // Добавить игрока
+        const playerDiv = document.createElement('div');
+        playerDiv.className = 'civ-item';
+        playerDiv.innerHTML = `
+            <span class="civ-flag">🎮</span>
+            <div class="civ-info">
+                <div class="civ-name">Вы</div>
+                <div class="civ-status friendly">Игрок</div>
+            </div>
+        `;
+        civsList.appendChild(playerDiv);
     }
-    
-    drawMap() {
-        const startCol = Math.floor(this.cameraX / this.tileSize);
-        const endCol = startCol + (this.canvas.width / this.tileSize) + 1;
-        const startRow = Math.floor(this.cameraY / this.tileSize);
-        const endRow = startRow + (this.canvas.height / this.tileSize) + 1;
+
+    showNotification(message) {
+        const container = document.getElementById('notifications');
+        const div = document.createElement('div');
+        div.className = 'notification';
+        div.textContent = message;
+        container.appendChild(div);
         
-        for (let y = startRow; y <= endRow; y++) {
-            for (let x = startCol; x <= endCol; x++) {
-                if (y >= 0 && y < this.mapHeight && x >= 0 && x < this.mapWidth) {
-                    const tile = this.map[y][x];
-                    const screenX = x * this.tileSize - this.cameraX;
-                    const screenY = y * this.tileSize - this.cameraY;
-                    
-                    const terrain = this.terrainTypes[tile.terrain];
-                    
-                    // Draw terrain with gradient
-                    const gradient = this.ctx.createLinearGradient(
-                        screenX, screenY,
-                        screenX + this.tileSize, screenY + this.tileSize
-                    );
-                    gradient.addColorStop(0, terrain.color);
-                    gradient.addColorStop(1, terrain.color2);
-                    
-                    this.ctx.fillStyle = gradient;
-                    this.ctx.fillRect(screenX, screenY, this.tileSize, this.tileSize);
-                    
-                    // Add texture pattern
-                    this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-                    this.ctx.lineWidth = 1;
-                    this.ctx.strokeRect(screenX, screenY, this.tileSize, this.tileSize);
-                    
-                    // Draw resource icon
-                    if (tile.resource) {
-                        this.ctx.font = '20px Arial';
-                        this.ctx.textAlign = 'center';
-                        this.ctx.textBaseline = 'middle';
-                        const icons = { 'пшеница': '🌾', 'золото': '💰', 'камень': '🪨', 'шелк': '🧵' };
-                        this.ctx.fillText(icons[tile.resource] || '📦', screenX + this.tileSize/2, screenY + this.tileSize/2);
-                    }
-                    
-                    // Draw ownership indicator
-                    if (tile.owner) {
-                        this.ctx.strokeStyle = '#4a9eff';
-                        this.ctx.lineWidth = 2;
-                        this.ctx.strokeRect(screenX + 2, screenY + 2, this.tileSize - 4, this.tileSize - 4);
-                    }
-                    
-                    // Highlight hovered tile
-                    if (this.hoveredTile && this.hoveredTile.x === x && this.hoveredTile.y === y) {
-                        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-                        this.ctx.fillRect(screenX, screenY, this.tileSize, this.tileSize);
-                        this.ctx.strokeStyle = '#ffd700';
-                        this.ctx.lineWidth = 3;
-                        this.ctx.strokeRect(screenX + 1, screenY + 1, this.tileSize - 2, this.tileSize - 2);
-                    }
-                }
-            }
-        }
-    }
-    
-    drawCities() {
-        for (const city of this.cities) {
-            const screenX = city.x * this.tileSize - this.cameraX;
-            const screenY = city.y * this.tileSize - this.cameraY;
-            
-            // City glow effect
-            const gradient = this.ctx.createRadialGradient(
-                screenX + this.tileSize/2, screenY + this.tileSize/2, 0,
-                screenX + this.tileSize/2, screenY + this.tileSize/2, this.tileSize
-            );
-            gradient.addColorStop(0, 'rgba(255, 215, 0, 0.3)');
-            gradient.addColorStop(1, 'rgba(255, 215, 0, 0)');
-            this.ctx.fillStyle = gradient;
-            this.ctx.fillRect(screenX - this.tileSize/2, screenY - this.tileSize/2, this.tileSize * 2, this.tileSize * 2);
-            
-            // City building
-            this.ctx.font = '30px Arial';
-            this.ctx.textAlign = 'center';
-            this.ctx.textBaseline = 'middle';
-            this.ctx.fillText('🏛️', screenX + this.tileSize/2, screenY + this.tileSize/2);
-            
-            // City name
-            this.ctx.font = 'bold 12px Arial';
-            this.ctx.fillStyle = '#fff';
-            this.ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
-            this.ctx.shadowBlur = 4;
-            this.ctx.fillText(city.name, screenX + this.tileSize/2, screenY - 5);
-            this.ctx.shadowBlur = 0;
-            
-            // Health bar
-            const healthPercent = city.health / city.maxHealth;
-            this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-            this.ctx.fillRect(screenX + 5, screenY + this.tileSize - 8, this.tileSize - 10, 5);
-            this.ctx.fillStyle = healthPercent > 0.5 ? '#2ecc71' : healthPercent > 0.25 ? '#f39c12' : '#e74c3c';
-            this.ctx.fillRect(screenX + 5, screenY + this.tileSize - 8, (this.tileSize - 10) * healthPercent, 5);
-        }
-    }
-    
-    drawUnits() {
-        for (const unit of this.units) {
-            const screenX = unit.x - this.cameraX;
-            const screenY = unit.y - this.cameraY;
-            
-            // Selection glow
-            if (unit === this.selectedUnit) {
-                const selectionGradient = this.ctx.createRadialGradient(
-                    screenX, screenY, 0,
-                    screenX, screenY, this.tileSize * 0.8
-                );
-                selectionGradient.addColorStop(0, 'rgba(74, 158, 255, 0.4)');
-                selectionGradient.addColorStop(1, 'rgba(74, 158, 255, 0)');
-                this.ctx.fillStyle = selectionGradient;
-                this.ctx.beginPath();
-                this.ctx.arc(screenX, screenY, this.tileSize * 0.8, 0, Math.PI * 2);
-                this.ctx.fill();
-                
-                // Selection ring
-                this.ctx.strokeStyle = '#4a9eff';
-                this.ctx.lineWidth = 3;
-                this.ctx.beginPath();
-                this.ctx.arc(screenX, screenY, this.tileSize * 0.6, 0, Math.PI * 2);
-                this.ctx.stroke();
-            }
-            
-            // Unit shadow
-            this.ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-            this.ctx.beginPath();
-            this.ctx.ellipse(screenX, screenY + this.tileSize * 0.4, this.tileSize * 0.3, this.tileSize * 0.15, 0, 0, Math.PI * 2);
-            this.ctx.fill();
-            
-            // Unit symbol
-            this.ctx.font = '24px Arial';
-            this.ctx.textAlign = 'center';
-            this.ctx.textBaseline = 'middle';
-            this.ctx.fillText(unit.symbol, screenX, screenY);
-            
-            // Health bar
-            const healthPercent = unit.health / unit.maxHealth;
-            this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-            this.ctx.fillRect(screenX - 15, screenY - this.tileSize * 0.4, 30, 4);
-            this.ctx.fillStyle = healthPercent > 0.5 ? '#2ecc71' : healthPercent > 0.25 ? '#f39c12' : '#e74c3c';
-            this.ctx.fillRect(screenX - 15, screenY - this.tileSize * 0.4, 30 * healthPercent, 4);
-            
-            // Level indicator
-            if (unit.level > 1) {
-                this.ctx.font = 'bold 10px Arial';
-                this.ctx.fillStyle = '#ffd700';
-                this.ctx.fillText(`★${unit.level}`, screenX + 15, screenY - this.tileSize * 0.4);
-            }
-        }
-    }
-    
-    drawParticles() {
-        for (const p of this.particles) {
-            this.ctx.globalAlpha = p.life;
-            this.ctx.fillStyle = p.color;
-            this.ctx.beginPath();
-            this.ctx.arc(p.x - this.cameraX, p.y - this.cameraY, p.size * p.life, 0, Math.PI * 2);
-            this.ctx.fill();
-        }
-        this.ctx.globalAlpha = 1;
-    }
-    
-    drawMinimap() {
-        const minimapScale = 200 / Math.max(this.mapWidth * this.tileSize, this.mapHeight * this.tileSize);
-        
-        this.minimapCtx.clearRect(0, 0, 200, 200);
-        
-        // Draw terrain
-        for (let y = 0; y < this.mapHeight; y++) {
-            for (let x = 0; x < this.mapWidth; x++) {
-                const terrain = this.terrainTypes[this.map[y][x].terrain];
-                this.minimapCtx.fillStyle = terrain.color;
-                this.minimapCtx.fillRect(
-                    x * this.tileSize * minimapScale,
-                    y * this.tileSize * minimapScale,
-                    this.tileSize * minimapScale + 1,
-                    this.tileSize * minimapScale + 1
-                );
-            }
-        }
-        
-        // Draw cities
-        this.minimapCtx.fillStyle = '#ffd700';
-        for (const city of this.cities) {
-            this.minimapCtx.fillRect(
-                city.x * this.tileSize * minimapScale - 2,
-                city.y * this.tileSize * minimapScale - 2,
-                5, 5
-            );
-        }
-        
-        // Draw units
-        this.minimapCtx.fillStyle = '#fff';
-        for (const unit of this.units) {
-            this.minimapCtx.fillRect(
-                (unit.x / this.tileSize) * this.tileSize * minimapScale - 1,
-                (unit.y / this.tileSize) * this.tileSize * minimapScale - 1,
-                3, 3
-            );
-        }
-        
-        // Draw camera viewport
-        this.minimapCtx.strokeStyle = '#ff0000';
-        this.minimapCtx.lineWidth = 2;
-        this.minimapCtx.strokeRect(
-            this.cameraX * minimapScale,
-            this.cameraY * minimapScale,
-            this.canvas.width * minimapScale,
-            this.canvas.height * minimapScale
-        );
-    }
-    
-    gameLoop(lastTime = 0) {
-        const currentTime = performance.now();
-        const dt = (currentTime - lastTime) / 1000;
-        
-        if (dt < 0.1) { // Prevent huge delta times
-            this.update(dt);
-            this.render();
-        }
-        
-        requestAnimationFrame((time) => this.gameLoop(time));
-    }
-    
-    update(dt) {
-        this.updateResources(dt);
-        this.updateUnits(dt);
-        this.updateParticles(dt);
-        this.updateUI();
-    }
-    
-    render() {
-        // Clear canvas
-        this.ctx.fillStyle = '#1a1a2e';
-        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-        
-        this.drawMap();
-        this.drawCities();
-        this.drawUnits();
-        this.drawParticles();
-        this.drawMinimap();
-    }
-    
-    startGameLoop() {
-        requestAnimationFrame((time) => this.gameLoop(time));
+        setTimeout(() => {
+            div.style.opacity = '0';
+            div.style.transition = 'opacity 0.3s';
+            setTimeout(() => div.remove(), 300);
+        }, 3000);
     }
 }
 
-// Start the game when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-    const game = new Game();
-});
+// Глобальные функции
+let game = null;
+
+function startGame() {
+    document.getElementById('main-menu').style.display = 'none';
+    document.getElementById('game-container').style.display = 'flex';
+    
+    game = new Game();
+}
+
+function foundCity() {
+    if (!game || game.resources.gold < 100) return;
+    
+    // Найти свободного юнита-поселенца или создать нового
+    const settlers = game.units.filter(u => u.type === 'settler' && !u.moving);
+    
+    if (settlers.length > 0) {
+        const settler = settlers[0];
+        game.resources.gold -= 100;
+        game.createPlayerCity(Math.round(settler.x), Math.round(settler.y));
+        
+        // Удалить поселенца
+        const idx = game.units.indexOf(settler);
+        if (idx > -1) game.units.splice(idx, 1);
+        if (game.selectedUnit === settler) game.deselectUnit();
+    } else {
+        game.showNotification('Нужен поселенец!');
+    }
+}
+
+function trainUnit(type) {
+    if (!game) return;
+    
+    const costs = {
+        warrior: { gold: 50, food: 10 },
+        archer: { gold: 80, food: 15 },
+        cavalry: { gold: 120, food: 20 }
+    };
+    
+    const cost = costs[type];
+    if (game.resources.gold >= cost.gold && game.resources.food >= cost.food) {
+        game.resources.gold -= cost.gold;
+        game.resources.food -= cost.food;
+        
+        // Найти город для производства
+        const city = game.cities[0];
+        if (city) {
+            city.producing = type;
+            city.production = 0;
+            game.showNotification(`Производство: ${type}`);
+        }
+    }
+}
